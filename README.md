@@ -17,7 +17,7 @@ This app uses AI agents to analyze SKU sales history, current inventory, outstan
 ## Features
 
 | Feature | Description |
-|---|---|
+|---|----|
 | Cash Flow Timeline | Daily cash position for the next 90 days with gap alerts |
 | Dead Stock List | Slow-moving SKUs ranked by days-of-supply with suggested discount rates |
 | Collections Priority | Overdue invoices ranked by aging × amount × late-payment probability |
