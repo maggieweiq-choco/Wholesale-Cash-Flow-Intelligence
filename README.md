@@ -43,6 +43,15 @@ This app uses AI agents to analyze SKU sales history, current inventory, outstan
 
 ---
 
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
 ## Judging Criteria
 
 | Criteria | Implementation |
