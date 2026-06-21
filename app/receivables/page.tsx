@@ -8,7 +8,7 @@ export default function ReceivablesPage() {
   const [items, setItems] = useState<CollectionsItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/receivables?companyId=demo")
+    fetch("/api/receivables?companyId=acme")
       .then((res) => res.json())
       .then((data) => setItems(data.items ?? []));
   }, []);

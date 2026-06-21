@@ -8,7 +8,7 @@ export default function InventoryPage() {
   const [items, setItems] = useState<DeadStockItem[]>([]);
 
   useEffect(() => {
-    fetch("/api/inventory?companyId=demo")
+    fetch("/api/inventory?companyId=acme")
       .then((res) => res.json())
       .then((data) => setItems(data.items ?? []));
   }, []);
