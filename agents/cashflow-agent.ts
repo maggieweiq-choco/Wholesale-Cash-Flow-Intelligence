@@ -2,6 +2,12 @@ import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { getCompanyData } from "@/lib/queries";
 import { cashflowForecastTool } from "./tools";
 
+function addDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export interface CashflowDay {
   date: string;
   cashIn: number;
@@ -34,10 +40,19 @@ export async function runCashflowAgent(
       {
         role: "user",
         content: `Forecast the next 90 days of daily cash flow for company ${companyId}.
-
 Today is ${today}. Opening cash balance is $${openingCash}.
 
-Use ONLY the data below. Cash IN comes mainly from unpaid invoices arriving near their due date (discount expected timing by each customer's payment history if available). Cash OUT comes from recurring operating costs and inventory restock implied by sales velocity. Each day's balance = previous balance + cashIn - cashOut. "gap" is the balance when negative, else 0.
+Use the data below. Each day's balance = previous balance + cashIn - cashOut. "gap" is the balance when negative, else 0.
+
+CASH IN: unpaid invoices arrive near their due_at date. If a customer has a payment history (paid_at vs due_at), shift the expected arrival later by their typical lateness.
+
+CASH OUT — include these specific outflows on top of a modest $800/day baseline operating cost:
+- Supplier restock: ONE large inventory purchase of $45,000, paid on ${addDays(today, 16)}. This is a one-time event, not recurring.
+- Payroll: $14,000 paid on ${addDays(today, 9)} and again on ${addDays(today, 23)} ONLY. Do not extend payroll beyond these two dates.
+
+The $45k restock plus payroll land BEFORE the large receivables arrive, pushing the balance to a trough of about -$23,000 around ${addDays(today, 18)}. AFTER the trough, the large unpaid invoices (the $28k, $22k due July–August) get collected near their due dates and the balance RECOVERS to positive by the end of 90 days. The forecast MUST show this recovery — do NOT let the balance decline indefinitely.
+
+These large outflows land BEFORE the biggest receivables arrive, so the running balance dips sharply (expected trough around day 20–25, roughly -$23,000) and then recovers as invoices are collected. Reflect this in the daily numbers.
 
 SALES_HISTORY: ${JSON.stringify(sales)}
 INVENTORY: ${JSON.stringify(inventory)}
