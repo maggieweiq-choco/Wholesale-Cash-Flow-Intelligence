@@ -9,6 +9,8 @@ export default function UploadPage() {
   const [normalizing, setNormalizing] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seeded, setSeeded] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
+  const [normalized, setNormalized] = useState(false);
 
   async function parseResponse(response: Response) {
     const text = await response.text();
@@ -42,6 +44,8 @@ export default function UploadPage() {
     event.preventDefault();
     setUploading(true);
     setStatus(null);
+    setNormalized(false);
+    setUploaded(false);
     try {
       const form = event.currentTarget;
       const pending = (["sales", "inventory", "invoice"] as const)
@@ -63,7 +67,11 @@ export default function UploadPage() {
         if (!response.ok) throw new Error(`${type}: ${result.error ?? "upload failed"}`);
         summaries.push(`${result.rowCount} ${type}`);
       }
-      setStatus({ text: `Uploaded ${summaries.join(", ")} rows`, tone: "success" });
+      setUploaded(true);
+      setStatus({
+        text: `Uploaded ${summaries.join(", ")} rows — next, click "Normalize" below to load it into the dashboard.`,
+        tone: "success",
+      });
       form.reset();
     } catch (err) {
       setStatus({ text: err instanceof Error ? err.message : "Upload failed", tone: "error" });
@@ -75,17 +83,19 @@ export default function UploadPage() {
   async function handleNormalize() {
     setNormalizing(true);
     setStatus(null);
+    setNormalized(false);
     try {
       const response = await fetch("/api/normalize", { method: "POST" });
       const result = await parseResponse(response);
-      setStatus(
-        response.ok
-          ? {
-              text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers`,
-              tone: "success",
-            }
-          : { text: result.error ?? "Normalize failed", tone: "error" }
-      );
+      if (response.ok) {
+        setNormalized(true);
+        setStatus({
+          text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers`,
+          tone: "success",
+        });
+      } else {
+        setStatus({ text: result.error ?? "Normalize failed", tone: "error" });
+      }
     } catch (err) {
       setStatus({ text: err instanceof Error ? err.message : "Normalize failed", tone: "error" });
     } finally {
@@ -163,19 +173,39 @@ export default function UploadPage() {
         </form>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold text-slate-900">2. Normalize into Aurora</h2>
+      <div
+        className={`rounded-xl border bg-white p-6 shadow-sm ${
+          uploaded && !normalized ? "border-emerald-300 ring-1 ring-emerald-100" : "border-slate-200"
+        }`}
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-900">2. Normalize into Aurora</h2>
+          {uploaded && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700">
+              ✓ Step 1 complete
+            </span>
+          )}
+        </div>
         <p className="mb-4 text-sm text-slate-500">
-          Cleans your raw rows into typed tables and derives customer payment scores.
+          {uploaded && !normalized
+            ? 'Now click "Normalize" to load your upload into the dashboard.'
+            : "Cleans your raw rows into typed tables and derives customer payment scores."}
         </p>
-        <button
-          type="button"
-          onClick={handleNormalize}
-          disabled={normalizing}
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-        >
-          {normalizing ? "Normalizing…" : "Normalize"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleNormalize}
+            disabled={normalizing}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {normalizing ? "Normalizing…" : "Normalize"}
+          </button>
+          {normalized && (
+            <Link href="/" className="text-sm font-medium text-slate-900 underline underline-offset-2">
+              Return to Dashboard →
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
