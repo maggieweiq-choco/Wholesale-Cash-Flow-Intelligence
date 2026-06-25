@@ -21,6 +21,35 @@ export async function getCompanyData(companyId: string) {
   return { sales, inventory: inv, invoices: invs, customers: custs };
 }
 
+// Days of Inventory Outstanding = current inventory value / average daily
+// cost of goods sold, derived purely from Aurora data (no LLM — it's a
+// deterministic financial formula, not something to "forecast").
+export async function getInventoryMetrics(companyId: string) {
+  const { sales, inventory: inv } = await getCompanyData(companyId);
+
+  const unitCostBySku = new Map(inv.map((row) => [row.sku, Number(row.unitCost ?? 0)]));
+
+  const totalInventoryValue = inv.reduce(
+    (sum, row) => sum + row.qtyOnHand * Number(row.unitCost ?? 0),
+    0
+  );
+
+  const totalCogs = sales.reduce(
+    (sum, row) => sum + row.soldQty * (unitCostBySku.get(row.sku) ?? 0),
+    0
+  );
+
+  const soldDates = sales.map((row) => new Date(row.soldAt).getTime());
+  const spanDays = soldDates.length
+    ? Math.max(1, Math.round((Math.max(...soldDates) - Math.min(...soldDates)) / 86_400_000) + 1)
+    : 0;
+
+  const avgDailyCogs = spanDays > 0 ? totalCogs / spanDays : 0;
+  const daysOfInventoryOutstanding = avgDailyCogs > 0 ? totalInventoryValue / avgDailyCogs : null;
+
+  return { totalInventoryValue, avgDailyCogs, daysOfInventoryOutstanding };
+}
+
 // Most-negative gap across the stored forecast — used to size financing.
 export async function getWorstGap(companyId: string): Promise<number> {
   const rows = await db

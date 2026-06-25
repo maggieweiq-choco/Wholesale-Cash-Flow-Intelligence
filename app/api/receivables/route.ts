@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { runReceivablesAgent } from "@/agents/receivables-agent";
+import { requireCompanyId } from "@/lib/dal";
 
 // Returns overdue invoices ranked by collections priority.
-export async function GET(request: NextRequest) {
-  const companyId = request.nextUrl.searchParams.get("companyId");
+export async function GET() {
+  const companyId = await requireCompanyId();
   if (!companyId) {
-    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const items = await runReceivablesAgent(companyId);

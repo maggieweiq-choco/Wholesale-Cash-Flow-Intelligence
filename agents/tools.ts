@@ -27,7 +27,8 @@ export const cashflowForecastTool: Anthropic.Tool = {
 
 export const deadStockTool: Anthropic.Tool = {
   name: "submit_dead_stock_ranking",
-  description: "Submit slow-moving SKUs ranked by days-of-supply with a suggested discount.",
+  description:
+    "Submit slow-moving SKUs ranked by days-of-supply with a suggested discount, a reorder/JIT recommendation to cut holding costs, and a vendor-negotiation tip.",
   input_schema: {
     type: "object",
     properties: {
@@ -39,8 +40,24 @@ export const deadStockTool: Anthropic.Tool = {
             sku: { type: "string" },
             daysOfSupply: { type: "number" },
             suggestedDiscountPct: { type: "number" },
+            reorderRecommendation: {
+              type: "string",
+              description:
+                "One short sentence on whether to keep the current reorder cadence, switch to smaller/more frequent (JIT) batches, or pause reordering — to cut holding costs on overstocked SKUs.",
+            },
+            vendorNegotiationTip: {
+              type: "string",
+              description:
+                "One short sentence on whether this SKU is a candidate to negotiate consignment or extended payment terms with its supplier, given how overstocked it is. Say 'No action needed' for healthy SKUs.",
+            },
           },
-          required: ["sku", "daysOfSupply", "suggestedDiscountPct"],
+          required: [
+            "sku",
+            "daysOfSupply",
+            "suggestedDiscountPct",
+            "reorderRecommendation",
+            "vendorNegotiationTip",
+          ],
         },
       },
     },

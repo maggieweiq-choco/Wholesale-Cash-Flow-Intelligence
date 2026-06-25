@@ -12,11 +12,25 @@ import type { RawUploadRow } from "@/db/dynamo";
 
 // Expected CSV columns (the seed files in /seed match these):
 //   sales.csv:     sku, sold_qty, revenue, sold_at(YYYY-MM-DD)
-//   inventory.csv: sku, qty_on_hand, unit_cost
+//   inventory.csv: sku, qty_on_hand, unit_cost, vendor_name(optional), vendor_country(optional)
 //   invoices.csv:  customer_id, customer_name, amount, issued_at, due_at, paid_at(optional)
 
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
+}
+
+// Aurora Data API caps request/response payloads at 1MB, so a single
+// db.insert(...).values(allRows) call fails once a CSV gets large. Insert in
+// fixed-size chunks instead — keeps every call well under that limit
+// regardless of how many rows a company uploads.
+async function insertInChunks<T>(
+  rows: T[],
+  insertFn: (chunk: T[]) => Promise<unknown>,
+  chunkSize = 200
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    await insertFn(rows.slice(i, i + chunkSize));
+  }
 }
 
 // Read every raw row for a company from DynamoDB (handles pagination).
@@ -57,42 +71,41 @@ export async function normalizeCompany(companyId: string) {
 
   // --- sales ---
   if (salesRows.length) {
-    await db.insert(skuSalesHistory).values(
-      salesRows.map((d) => ({
-        companyId,
-        sku: d.sku,
-        soldQty: Number(d.sold_qty ?? 0),
-        revenue: String(d.revenue ?? "0"),
-        soldAt: d.sold_at,
-      }))
-    );
+    const rows = salesRows.map((d) => ({
+      companyId,
+      sku: d.sku,
+      soldQty: Number(d.sold_qty ?? 0),
+      revenue: String(d.revenue ?? "0"),
+      soldAt: d.sold_at,
+    }));
+    await insertInChunks(rows, (chunk) => db.insert(skuSalesHistory).values(chunk));
   }
 
   // --- inventory ---
   if (inventoryRows.length) {
-    await db.insert(inventory).values(
-      inventoryRows.map((d) => ({
-        companyId,
-        sku: d.sku,
-        qtyOnHand: Number(d.qty_on_hand ?? 0),
-        unitCost: String(d.unit_cost ?? "0"),
-      }))
-    );
+    const rows = inventoryRows.map((d) => ({
+      companyId,
+      sku: d.sku,
+      qtyOnHand: Number(d.qty_on_hand ?? 0),
+      unitCost: String(d.unit_cost ?? "0"),
+      vendorName: d.vendor_name && d.vendor_name.trim() !== "" ? d.vendor_name : null,
+      vendorCountry: d.vendor_country && d.vendor_country.trim() !== "" ? d.vendor_country : null,
+    }));
+    await insertInChunks(rows, (chunk) => db.insert(inventory).values(chunk));
   }
 
   // --- invoices + derived customers ---
   if (invoiceRows.length) {
-    await db.insert(invoices).values(
-      invoiceRows.map((d) => ({
-        companyId,
-        customerId: d.customer_id,
-        amount: String(d.amount ?? "0"),
-        issuedAt: d.issued_at,
-        dueAt: d.due_at,
-        paidAt: d.paid_at && d.paid_at.trim() !== "" ? d.paid_at : null,
-        status: d.paid_at && d.paid_at.trim() !== "" ? "paid" : "unpaid",
-      }))
-    );
+    const rows = invoiceRows.map((d) => ({
+      companyId,
+      customerId: d.customer_id,
+      amount: String(d.amount ?? "0"),
+      issuedAt: d.issued_at,
+      dueAt: d.due_at,
+      paidAt: d.paid_at && d.paid_at.trim() !== "" ? d.paid_at : null,
+      status: d.paid_at && d.paid_at.trim() !== "" ? "paid" : "unpaid",
+    }));
+    await insertInChunks(rows, (chunk) => db.insert(invoices).values(chunk));
 
     // Derive customer payment behaviour from paid invoices.
     const byCustomer = new Map<string, { name: string; lateDays: number[] }>();
@@ -120,7 +133,7 @@ export async function normalizeCompany(companyId: string) {
     });
 
     if (customerRows.length) {
-      await db.insert(customers).values(customerRows);
+      await insertInChunks(customerRows, (chunk) => db.insert(customers).values(chunk));
     }
   }
 

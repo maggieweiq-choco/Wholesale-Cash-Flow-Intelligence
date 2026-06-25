@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { runCashflowAgent } from "@/agents/cashflow-agent";
 import { db } from "@/lib/aurora";
 import { cashFlowForecast } from "@/db/schema";
+import { requireCompanyId } from "@/lib/dal";
 
 // Runs the cash flow agent (grounded in Aurora data) and persists the fresh
 // 90-day forecast, replacing any previous one for this company.
 export async function POST(request: NextRequest) {
-  const { companyId, openingCash } = await request.json();
+  const companyId = await requireCompanyId();
   if (!companyId) {
-    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const { openingCash } = await request.json();
   const forecast = await runCashflowAgent(companyId, openingCash ?? 50_000);
 
   await db.delete(cashFlowForecast).where(eq(cashFlowForecast.companyId, companyId));
@@ -31,14 +33,16 @@ export async function POST(request: NextRequest) {
 }
 
 // Lets the dashboard read the stored forecast without re-running Claude.
-export async function GET(request: NextRequest) {
-  const companyId = request.nextUrl.searchParams.get("companyId");
+export async function GET() {
+  const companyId = await requireCompanyId();
   if (!companyId) {
-    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
+
   const rows = await db
     .select()
     .from(cashFlowForecast)
-    .where(eq(cashFlowForecast.companyId, companyId));
+    .where(eq(cashFlowForecast.companyId, companyId))
+    .orderBy(asc(cashFlowForecast.forecastDt));
   return NextResponse.json({ forecast: rows });
 }
