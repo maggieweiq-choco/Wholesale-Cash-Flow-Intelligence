@@ -44,8 +44,12 @@ export default function LoginPage() {
               name="username"
               type="text"
               required
+              placeholder="e.g. acme-corp"
               className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
             />
+            <span className="text-xs text-slate-400">
+              The username you signed up with — not an email address. No password needed yet.
+            </span>
           </label>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

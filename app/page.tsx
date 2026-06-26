@@ -320,6 +320,7 @@ function ReceivablesSection() {
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Failed to load receivables");
       setItems(data.items ?? []);
+      setError(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load receivables");
       setItems([]);

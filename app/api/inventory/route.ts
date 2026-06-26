@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { runInventoryAgent } from "@/agents/inventory-agent";
+import { computeInventoryBase, runInventoryAgent } from "@/agents/inventory-agent";
 import { getCompanyData, getInventoryMetrics } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
 
 // Returns dead-stock SKUs ranked by days-of-supply with a suggested discount
 // (each tagged with its current inventory value for charting), plus
-// company-level Days of Inventory Outstanding.
+// company-level Days of Inventory Outstanding. The days-of-supply/discount
+// numbers are always the deterministic base calc; Claude's reorder/vendor
+// copy is layered on top when available, but its absence never hides data.
 export async function GET() {
   const companyId = await requireCompanyId();
   if (!companyId) {
@@ -18,7 +20,8 @@ export async function GET() {
     getCompanyData(companyId),
   ]);
 
-  const items = Array.isArray(agentResult) ? agentResult : [];
+  const baseItems = computeInventoryBase(companyData.inventory, companyData.sales);
+  const items = Array.isArray(agentResult) ? agentResult : baseItems;
   const agentError = Array.isArray(agentResult) ? null : agentResult.error;
 
   const bySku = new Map(companyData.inventory.map((row) => [row.sku, row]));

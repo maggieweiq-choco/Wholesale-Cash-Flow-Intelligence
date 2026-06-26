@@ -46,8 +46,13 @@ export default function SignupPage() {
               name="username"
               type="text"
               required
+              placeholder="e.g. acme-corp"
               className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
             />
+            <span className="text-xs text-slate-400">
+              Pick any username — it does not need to be an email address. Remember it; you&apos;ll use it to log
+              back in (no password for now).
+            </span>
           </label>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

@@ -10,6 +10,56 @@ export interface DeadStockItem {
   vendorNegotiationTip: string;
 }
 
+interface InventoryRow {
+  sku: string;
+  qtyOnHand: number;
+  vendorName?: string | null;
+}
+
+interface SalesRow {
+  sku: string;
+  soldQty: number;
+  soldAt: string;
+}
+
+// Deterministic days-of-supply + a rule-of-thumb discount, computed straight
+// from Aurora data with plain arithmetic. This is what renders even when
+// Claude is unavailable — the AI call below only adds judgment-based
+// reorder/vendor copy on top, it never invents the underlying numbers.
+export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[]): DeadStockItem[] {
+  const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
+  for (const s of sales) {
+    const t = new Date(s.soldAt).getTime();
+    const entry = bySku.get(s.sku) ?? { totalQty: 0, minDate: t, maxDate: t };
+    entry.totalQty += s.soldQty;
+    entry.minDate = Math.min(entry.minDate, t);
+    entry.maxDate = Math.max(entry.maxDate, t);
+    bySku.set(s.sku, entry);
+  }
+
+  return inventory.map((inv) => {
+    const sale = bySku.get(inv.sku);
+    const spanDays = sale ? Math.max(1, Math.round((sale.maxDate - sale.minDate) / 86_400_000) + 1) : 0;
+    const avgDailyVelocity = sale && spanDays > 0 ? sale.totalQty / spanDays : 0;
+    const daysOfSupply = avgDailyVelocity > 0 ? Math.round(inv.qtyOnHand / avgDailyVelocity) : 999;
+    const suggestedDiscountPct = Math.min(50, Math.max(0, Math.round(daysOfSupply / 6)));
+
+    const reorderRecommendation =
+      daysOfSupply > 90
+        ? "Pause the next reorder — significantly overstocked."
+        : daysOfSupply > 30
+        ? "Switch to smaller, more frequent (JIT) reorder batches."
+        : "Current reorder cadence looks fine.";
+
+    const vendorNegotiationTip =
+      daysOfSupply > 60
+        ? `Worth raising with${inv.vendorName ? ` ${inv.vendorName}` : " the supplier"} — ask for consignment or extended payment terms.`
+        : "No action needed.";
+
+    return { sku: inv.sku, daysOfSupply, suggestedDiscountPct, reorderRecommendation, vendorNegotiationTip };
+  });
+}
+
 // Ranks SKUs by sales velocity vs quantity on hand and flags slow movers
 // with a suggested liquidation discount, a JIT/reorder recommendation to
 // cut holding costs, and a vendor-negotiation tip — grounded in real Aurora
