@@ -9,12 +9,18 @@
 // To sidestep that entirely, our own keys live under APP_AWS_* names and get
 // passed to each client explicitly. Locally those vars are unset, so we omit
 // `credentials` and let the SDK fall back to `~/.aws/credentials` as usual.
-export const awsRegion = process.env.APP_AWS_REGION ?? process.env.AWS_REGION;
+// Trim defensively: a stray trailing newline or surrounding quotes from
+// copy-pasting into Vercel's env var UI produces an access key/secret with
+// an invalid character, which breaks SigV4 header construction with
+// "TypeError: Invalid character in header content [\"authorization\"]".
+function clean(value: string | undefined): string | undefined {
+  return value?.trim().replace(/^["']|["']$/g, "");
+}
+
+export const awsRegion = clean(process.env.APP_AWS_REGION) ?? clean(process.env.AWS_REGION);
+
+const accessKeyId = clean(process.env.APP_AWS_ACCESS_KEY_ID);
+const secretAccessKey = clean(process.env.APP_AWS_SECRET_ACCESS_KEY);
 
 export const awsCredentials =
-  process.env.APP_AWS_ACCESS_KEY_ID && process.env.APP_AWS_SECRET_ACCESS_KEY
-    ? {
-        accessKeyId: process.env.APP_AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.APP_AWS_SECRET_ACCESS_KEY,
-      }
-    : undefined;
+  accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
