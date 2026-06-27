@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const LINKS = [
-  { href: "/#forecast", label: "Dashboard" },
+  { href: "/#cashflow", label: "Dashboard" },
   { href: "/upload", label: "Upload Data" },
   { href: "/#inventory", label: "Inventory" },
   { href: "/#receivables", label: "Receivables" },
