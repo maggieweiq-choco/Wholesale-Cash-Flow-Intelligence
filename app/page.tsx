@@ -6,9 +6,13 @@ import { RiskAlerts, type RiskAlert } from "@/components/RiskAlerts";
 import { DeadStockTable } from "@/components/DeadStockTable";
 import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/InventoryBubbleChart";
 import { ReceivablesTable } from "@/components/ReceivablesTable";
+import { PayablesTable } from "@/components/PayablesTable";
+import { PurchasingTable } from "@/components/PurchasingTable";
 import { FinancingPanel } from "@/components/FinancingPanel";
 import type { CashflowDay } from "@/agents/cashflow-agent";
 import type { CollectionsItem } from "@/agents/receivables-agent";
+import type { PayablesItem } from "@/agents/payables-agent";
+import type { PurchasingItem } from "@/agents/purchasing-agent";
 import type { FinancingRecommendation } from "@/agents/financing-agent";
 
 export default function DashboardPage() {
@@ -18,7 +22,11 @@ export default function DashboardPage() {
       <SectionDivider />
       <InventorySection />
       <SectionDivider />
+      <PurchasingSection />
+      <SectionDivider />
       <ReceivablesSection />
+      <SectionDivider />
+      <PayablesSection />
       <SectionDivider />
       <FinancingSection />
     </main>
@@ -439,6 +447,59 @@ function InventorySection() {
   );
 }
 
+function PurchasingSection() {
+  const [items, setItems] = useState<PurchasingItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/purchasing");
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error ?? "Failed to load purchasing recommendations");
+      setItems(data.items ?? []);
+      setError(data.agentError ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load purchasing recommendations");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  return (
+    <SectionShell
+      id="purchasing"
+      title="Purchasing Recommendations"
+      description="SKUs to reorder, how much, and the estimated cost — based on real sales velocity vs. inventory on hand."
+      action={
+        <button
+          type="button"
+          onClick={load}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Refresh
+        </button>
+      }
+    >
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PurchasingTable items={items} />}
+      </div>
+    </SectionShell>
+  );
+}
+
 function ReceivablesSection() {
   const [items, setItems] = useState<CollectionsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -491,6 +552,59 @@ function ReceivablesSection() {
         ) : (
           <ReceivablesTable items={items} />
         )}
+      </div>
+    </SectionShell>
+  );
+}
+
+function PayablesSection() {
+  const [items, setItems] = useState<PayablesItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/payables");
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) throw new Error(data.error ?? "Failed to load payables");
+      setItems(data.items ?? []);
+      setError(data.agentError ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load payables");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  return (
+    <SectionShell
+      id="payables"
+      title="Upcoming Bills"
+      description="Vendor bills ranked by payment urgency — due-soon and large bills first."
+      action={
+        <button
+          type="button"
+          onClick={load}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Refresh
+        </button>
+      }
+    >
+      {error && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PayablesTable items={items} />}
       </div>
     </SectionShell>
   );

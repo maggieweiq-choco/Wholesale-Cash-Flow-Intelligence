@@ -55,6 +55,29 @@ export const customers = pgTable(
   (table) => [primaryKey({ columns: [table.companyId, table.id] })]
 );
 
+export const payables = pgTable("payables", {
+  id: serial("id").primaryKey(),
+  companyId: text("company_id").notNull(),
+  vendorId: text("vendor_id").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  issuedAt: date("issued_at").notNull(),
+  dueAt: date("due_at").notNull(),
+  paidAt: date("paid_at"),
+  status: text("status").default("unpaid"), // unpaid / partial / paid
+});
+
+export const vendors = pgTable(
+  "vendors",
+  {
+    // vendor_id from the source CSV — only unique within a company, not
+    // globally, mirrors the customers table's per-tenant id scheme.
+    id: text("id").notNull(),
+    companyId: text("company_id").notNull(),
+    name: text("name").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.companyId, table.id] })]
+);
+
 export const cashFlowForecast = pgTable("cash_flow_forecast", {
   id: serial("id").primaryKey(),
   companyId: text("company_id").notNull(),

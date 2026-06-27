@@ -8,7 +8,9 @@ const LINKS = [
   { href: "/#cashflow", label: "Dashboard" },
   { href: "/upload", label: "Upload Data" },
   { href: "/#inventory", label: "Inventory" },
+  { href: "/#purchasing", label: "Purchasing" },
   { href: "/#receivables", label: "Receivables" },
+  { href: "/#payables", label: "Payables" },
   { href: "/#financing", label: "Financing" },
 ];
 

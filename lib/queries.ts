@@ -5,6 +5,8 @@ import {
   inventory,
   invoices,
   customers,
+  payables,
+  vendors,
   cashFlowForecast,
 } from "@/db/schema";
 
@@ -12,13 +14,15 @@ import {
 // This is the fix for the core bug: agents used to prompt Claude with no
 // data, so it invented numbers. Now we pass the real rows.
 export async function getCompanyData(companyId: string) {
-  const [sales, inv, invs, custs] = await Promise.all([
+  const [sales, inv, invs, custs, pays, vens] = await Promise.all([
     db.select().from(skuSalesHistory).where(eq(skuSalesHistory.companyId, companyId)),
     db.select().from(inventory).where(eq(inventory.companyId, companyId)),
     db.select().from(invoices).where(eq(invoices.companyId, companyId)),
     db.select().from(customers).where(eq(customers.companyId, companyId)),
+    db.select().from(payables).where(eq(payables.companyId, companyId)),
+    db.select().from(vendors).where(eq(vendors.companyId, companyId)),
   ]);
-  return { sales, inventory: inv, invoices: invs, customers: custs };
+  return { sales, inventory: inv, invoices: invs, customers: custs, payables: pays, vendors: vens };
 }
 
 // Days of Inventory Outstanding = current inventory value / average daily

@@ -10,6 +10,7 @@ const SEED_FILES: { type: UploadType; file: string }[] = [
   { type: "sales", file: "sales.csv" },
   { type: "inventory", file: "inventory.csv" },
   { type: "invoice", file: "invoices.csv" },
+  { type: "payable", file: "payables.csv" },
 ];
 
 // Loads the bundled seed/*.csv files into the current user's company

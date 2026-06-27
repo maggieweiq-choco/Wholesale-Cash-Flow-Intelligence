@@ -4,7 +4,7 @@
 export interface RawUploadRow {
   companyId: string;
   rowId: string;
-  type: "sales" | "inventory" | "invoice";
+  type: "sales" | "inventory" | "invoice" | "payable";
   data: Record<string, string>;
   uploadedAt: string; // ISO timestamp
 }

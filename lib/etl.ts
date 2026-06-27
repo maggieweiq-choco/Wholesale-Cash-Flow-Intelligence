@@ -7,6 +7,8 @@ import {
   inventory,
   invoices,
   customers,
+  payables,
+  vendors,
 } from "@/db/schema";
 import type { RawUploadRow } from "@/db/dynamo";
 
@@ -14,6 +16,7 @@ import type { RawUploadRow } from "@/db/dynamo";
 //   sales.csv:     sku, sold_qty, revenue, sold_at(YYYY-MM-DD)
 //   inventory.csv: sku, qty_on_hand, unit_cost, vendor_name(optional), vendor_country(optional)
 //   invoices.csv:  customer_id, customer_name, amount, issued_at, due_at, paid_at(optional)
+//   payables.csv:  vendor_id, vendor_name, amount, issued_at, due_at, paid_at(optional)
 
 function daysBetween(a: string, b: string): number {
   return Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000);
@@ -60,6 +63,7 @@ export async function normalizeCompany(companyId: string) {
   const salesRows = raw.filter((r) => r.type === "sales").map((r) => r.data);
   const inventoryRows = raw.filter((r) => r.type === "inventory").map((r) => r.data);
   const invoiceRows = raw.filter((r) => r.type === "invoice").map((r) => r.data);
+  const payableRows = raw.filter((r) => r.type === "payable").map((r) => r.data);
 
   // Clear prior normalized data for this company.
   await Promise.all([
@@ -67,6 +71,8 @@ export async function normalizeCompany(companyId: string) {
     db.delete(inventory).where(eq(inventory.companyId, companyId)),
     db.delete(invoices).where(eq(invoices.companyId, companyId)),
     db.delete(customers).where(eq(customers.companyId, companyId)),
+    db.delete(payables).where(eq(payables.companyId, companyId)),
+    db.delete(vendors).where(eq(vendors.companyId, companyId)),
   ]);
 
   // --- sales ---
@@ -137,10 +143,33 @@ export async function normalizeCompany(companyId: string) {
     }
   }
 
+  // --- payables + derived vendors ---
+  if (payableRows.length) {
+    const rows = payableRows.map((d) => ({
+      companyId,
+      vendorId: d.vendor_id,
+      amount: String(d.amount ?? "0"),
+      issuedAt: d.issued_at,
+      dueAt: d.due_at,
+      paidAt: d.paid_at && d.paid_at.trim() !== "" ? d.paid_at : null,
+      status: d.paid_at && d.paid_at.trim() !== "" ? "paid" : "unpaid",
+    }));
+    await insertInChunks(rows, (chunk) => db.insert(payables).values(chunk));
+
+    const vendorRows = [...new Map(payableRows.map((d) => [d.vendor_id, d.vendor_name ?? d.vendor_id])).entries()].map(
+      ([id, name]) => ({ id, companyId, name })
+    );
+    if (vendorRows.length) {
+      await insertInChunks(vendorRows, (chunk) => db.insert(vendors).values(chunk));
+    }
+  }
+
   return {
     sales: salesRows.length,
     inventory: inventoryRows.length,
     invoices: invoiceRows.length,
     customers: new Set(invoiceRows.map((d) => d.customer_id)).size,
+    payables: payableRows.length,
+    vendors: new Set(payableRows.map((d) => d.vendor_id)).size,
   };
 }

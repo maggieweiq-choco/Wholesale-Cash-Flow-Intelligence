@@ -27,7 +27,7 @@ export default function UploadPage() {
       if (response.ok) {
         setSeeded(true);
         setStatus({
-          text: `Loaded sample data — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers`,
+          text: `Loaded sample data — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers, ${result.counts.payables ?? 0} payables, ${result.counts.vendors ?? 0} vendors`,
           tone: "success",
         });
       } else {
@@ -48,7 +48,7 @@ export default function UploadPage() {
     setUploaded(false);
     try {
       const form = event.currentTarget;
-      const pending = (["sales", "inventory", "invoice"] as const)
+      const pending = (["sales", "inventory", "invoice", "payable"] as const)
         .map((type) => ({ type, file: (form.elements.namedItem(type) as HTMLInputElement)?.files?.[0] }))
         .filter((entry) => entry.file);
 
@@ -90,7 +90,7 @@ export default function UploadPage() {
       if (response.ok) {
         setNormalized(true);
         setStatus({
-          text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers`,
+          text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers, ${result.counts.payables ?? 0} payables, ${result.counts.vendors ?? 0} vendors`,
           tone: "success",
         });
       } else {
@@ -159,6 +159,14 @@ export default function UploadPage() {
             <input
               type="file"
               name="invoice"
+              accept=".csv"
+              className="text-sm text-slate-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+            />
+          </Field>
+          <Field label="Payables CSV">
+            <input
+              type="file"
+              name="payable"
               accept=".csv"
               className="text-sm text-slate-600 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
             />

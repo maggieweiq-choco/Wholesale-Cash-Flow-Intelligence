@@ -90,6 +90,57 @@ export const collectionsPriorityTool: Anthropic.Tool = {
   },
 };
 
+export const payablesPriorityTool: Anthropic.Tool = {
+  name: "submit_payables_priority",
+  description: "Submit upcoming vendor bills ranked by payment urgency.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            billId: { type: "string" },
+            vendorId: { type: "string" },
+            amount: { type: "number" },
+            daysUntilDue: { type: "number" },
+            priorityScore: { type: "number" },
+          },
+          required: ["billId", "vendorId", "amount", "daysUntilDue", "priorityScore"],
+        },
+      },
+    },
+    required: ["items"],
+  },
+};
+
+export const purchasingRecommendationTool: Anthropic.Tool = {
+  name: "submit_purchasing_recommendation",
+  description: "Submit which SKUs to reorder, how much, and the estimated cost, based on real sales velocity vs. inventory on hand.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            sku: { type: "string" },
+            vendorName: { type: "string", description: "Real supplier name from the inventory row, or omit if unknown." },
+            daysOfSupply: { type: "number" },
+            recommendedQty: { type: "number" },
+            estimatedCost: { type: "number" },
+            urgency: { type: "string", enum: ["reorder_now", "reorder_soon", "healthy"] },
+          },
+          required: ["sku", "daysOfSupply", "recommendedQty", "estimatedCost", "urgency"],
+        },
+      },
+    },
+    required: ["items"],
+  },
+};
+
 export const financingRecommendationTool: Anthropic.Tool = {
   name: "submit_financing_recommendation",
   description: "Submit a comparison of financing options for closing the cash flow gap.",
