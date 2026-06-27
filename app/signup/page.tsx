@@ -20,7 +20,8 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: formData.get("username") }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Sign up failed");
       router.push("/upload");
       router.refresh();

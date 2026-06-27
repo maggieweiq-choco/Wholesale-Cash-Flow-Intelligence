@@ -1,7 +1,8 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { BatchWriteCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { awsCredentials, awsRegion } from "@/lib/aws-credentials";
 
-const client = new DynamoDBClient({ region: process.env.AWS_REGION });
+const client = new DynamoDBClient({ region: awsRegion, credentials: awsCredentials });
 
 export const dynamo = DynamoDBDocumentClient.from(client);
 
