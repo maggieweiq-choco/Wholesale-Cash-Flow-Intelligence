@@ -1,18 +1,37 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const LINKS = [
-  { href: "/", label: "Dashboard" },
+  { href: "/#forecast", label: "Dashboard" },
   { href: "/upload", label: "Upload Data" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/receivables", label: "Receivables" },
-  { href: "/financing", label: "Financing" },
+  { href: "/#inventory", label: "Inventory" },
+  { href: "/#receivables", label: "Receivables" },
+  { href: "/#financing", label: "Financing" },
 ];
+
+const AUTH_PATHS = ["/login", "/signup"];
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const isAuthPage = AUTH_PATHS.includes(pathname);
+
+  useEffect(() => {
+    if (isAuthPage) return;
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => setCompanyId(data.user?.companyId ?? null));
+  }, [isAuthPage, pathname]);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header className="border-b border-slate-200 bg-white">
@@ -25,24 +44,39 @@ export function Nav() {
             Wholesale Cash Flow Intelligence
           </span>
         </Link>
-        <nav className="flex gap-1 text-sm font-medium">
-          {LINKS.map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-md px-3 py-1.5 transition-colors ${
-                  active
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
+        {!isAuthPage && (
+          <div className="flex items-center gap-4">
+            <nav className="flex gap-1 text-sm font-medium">
+              {LINKS.map((link) => {
+                const active = pathname === link.href.split("#")[0];
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`rounded-md px-3 py-1.5 transition-colors ${
+                      active
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+            {companyId && (
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                <span className="text-xs text-slate-400">{companyId}</span>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

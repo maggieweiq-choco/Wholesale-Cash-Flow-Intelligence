@@ -11,7 +11,8 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
         <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
           <th className="py-2 pr-4">SKU</th>
           <th className="py-2 pr-4">Days of Supply</th>
-          <th className="py-2">Suggested Discount</th>
+          <th className="py-2 pr-4">Suggested Discount</th>
+          <th className="py-2">Recommendations</th>
         </tr>
       </thead>
       <tbody>
@@ -19,8 +20,12 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
           <tr key={item.sku} className="border-b border-slate-100 last:border-0">
             <td className="py-3 pr-4 font-medium text-slate-900">{item.sku}</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
-            <td className="py-3">
+            <td className="py-3 pr-4">
               <DiscountBadge pct={item.suggestedDiscountPct} />
+            </td>
+            <td className="py-3 max-w-xs">
+              <p className="text-slate-700">{item.reorderRecommendation}</p>
+              <p className="mt-1 text-xs text-slate-400">{item.vendorNegotiationTip}</p>
             </td>
           </tr>
         ))}

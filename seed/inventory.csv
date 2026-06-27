@@ -1,5 +1,17 @@
-sku,qty_on_hand,unit_cost
-SKU-100,200,18.00
-SKU-200,110,55.00
-SKU-300,420,42.00
-SKU-400,300,90.00
+sku,qty_on_hand,unit_cost,vendor_name,vendor_country
+240100300006,23,23.45,Royal Darts Ltd,GB
+240100200012,34,14.4,Royal Darts Ltd,GB
+230100700008,21,253.2,Petterson AB,SE
+230100700011,24,120.19,Petterson AB,SE
+230100700002,32,135.0,Outback Outfitters Ltd,GB
+230100500082,29,58.6,AllSeasons Outdoor Clothing,US
+230100600022,38,42.15,Top Sports,DK
+230100500096,32,17.25,AllSeasons Outdoor Clothing,US
+220200100099,45,79.0,Eclipse Inc,US
+240700300002,50,7.25,HighPoint Trading,US
+230100100013,62,58.9,AllSeasons Outdoor Clothing,US
+220200100098,49,66.5,Eclipse Inc,US
+240700100001,56,12.3,A Team Sports,US
+240700400036,70,2.75,Teamsports Inc,US
+230100600036,41,50.4,Outback Outfitters Ltd,GB
+240100300001,33,18.2,Royal Darts Ltd,GB

@@ -10,6 +10,41 @@ export interface CollectionsItem {
   priorityScore: number;
 }
 
+interface InvoiceRow {
+  id: number;
+  customerId: string;
+  amount: string;
+  dueAt: string;
+  status: string | null;
+}
+
+interface CustomerRow {
+  id: string;
+  paymentScore: string | null;
+}
+
+// Deterministic aging x amount x customer-unreliability score, computed
+// straight from Aurora data with plain arithmetic — this is what renders
+// even when Claude is unavailable. The AI call below only re-ranks/refines
+// on top, it never invents daysOverdue or amount.
+export function computeCollectionsBase(invoices: InvoiceRow[], customers: CustomerRow[]): CollectionsItem[] {
+  const today = Date.now();
+  const byCustomer = new Map(customers.map((c) => [c.id, c]));
+
+  return invoices
+    .filter((inv) => inv.status !== "paid")
+    .map((inv) => {
+      const daysOverdue = Math.max(0, Math.round((today - new Date(inv.dueAt).getTime()) / 86_400_000));
+      const paymentScore = Number(byCustomer.get(inv.customerId)?.paymentScore ?? 5);
+      const unreliability = (11 - paymentScore) / 10; // ~0.1 (reliable) to 1.0 (unreliable)
+      const amount = Number(inv.amount);
+      const priorityScore = Math.round(daysOverdue * amount * unreliability) / 100;
+      return { invoiceId: String(inv.id), customerId: inv.customerId, amount, daysOverdue, priorityScore };
+    })
+    .filter((item) => item.daysOverdue > 0)
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+}
+
 // Ranks overdue invoices by aging x amount x customer late-payment
 // probability so collections effort goes to the highest-impact accounts.
 export async function runReceivablesAgent(companyId: string): Promise<CollectionsItem[]> {

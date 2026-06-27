@@ -19,7 +19,7 @@ This app uses AI agents to analyze SKU sales history, current inventory, outstan
 | Feature | Description |
 |---|----|
 | Cash Flow Timeline | Daily cash position for the next 90 days with gap alerts |
-| Dead Stock List | Slow-moving SKUs ranked by days-of-supply with suggested discount rates |
+| Dead Stock List | Slow-moving SKUs ranked by days-of-supply, with a suggested discount, a JIT/reorder recommendation to cut holding costs, and a vendor-negotiation tip (consignment / extended terms) |
 | Collections Priority | Overdue invoices ranked by aging × amount × late-payment probability |
 | Financing Recommendation | How much to borrow, for how long, and how liquidation offsets the gap |
 | Audit Compliance Alert | Flags receivables approaching the 90-day write-off threshold |
@@ -40,6 +40,22 @@ This app uses AI agents to analyze SKU sales history, current inventory, outstan
 3. Claude agents query Aurora to compute the cash flow gap, rank dead stock and overdue receivables, and compare financing options
 4. Dashboard reads the results from Aurora and renders the timeline, tables, and recommendation
 5. Cron job re-runs the forecast daily so the timeline stays current
+
+---
+
+## Roadmap
+
+**ERP / Accounting Integrations** — Manual CSV upload is the MVP data path for this hackathon. The natural next step is direct integration with the systems wholesalers already run their business on, so sales, inventory, and invoice data sync automatically and the upload step disappears entirely:
+
+| System | Data Synced |
+|---|---|
+| QuickBooks Online | Invoices, customer payment history, AR aging |
+| NetSuite | Sales orders, inventory levels, customer terms |
+| Odoo | SKU sales history, stock levels, purchase orders |
+| Cin7 / Fishbowl | Warehouse inventory, SKU movement |
+| Sage / Acumatica | Invoices, supplier payment schedules |
+
+Each would connect via the vendor's OAuth2 API, with a scheduled pull (reusing the existing Vercel Cron pattern) feeding the same DynamoDB → Aurora normalization pipeline that CSV uploads use today — so the agents and dashboard don't need to change, only the ingestion source.
 
 ---
 

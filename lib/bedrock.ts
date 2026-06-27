@@ -1,6 +1,10 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { awsCredentials, awsRegion } from "@/lib/aws-credentials";
 
-const client = new BedrockRuntimeClient({ region: process.env.BEDROCK_REGION ?? process.env.AWS_REGION });
+const client = new BedrockRuntimeClient({
+  region: process.env.BEDROCK_REGION ?? awsRegion,
+  credentials: awsCredentials,
+});
 
 export async function embedText(text: string): Promise<number[]> {
   const response = await client.send(
