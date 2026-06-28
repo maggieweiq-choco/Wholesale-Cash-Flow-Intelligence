@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { computeInventoryBase, runInventoryAgent } from "@/agents/inventory-agent";
 import { getCompanyData, getInventoryMetrics } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
+import { describeAgentError } from "@/lib/claude";
 
 // Returns dead-stock SKUs ranked by days-of-supply with a suggested discount
 // (each tagged with its current inventory value for charting), plus
@@ -15,7 +16,11 @@ export async function GET() {
   }
 
   const [agentResult, metrics, companyData] = await Promise.all([
-    runInventoryAgent(companyId).catch((err) => ({ error: err instanceof Error ? err.message : "Agent failed" })),
+    runInventoryAgent(companyId).catch((err) => ({
+      // "No data yet" is a real, actionable message; anything else (no key,
+      // no credits, rate limit, etc.) is just the AI layer being down.
+      error: err instanceof Error && err.message.includes("Upload + normalize first") ? err.message : describeAgentError(),
+    })),
     getInventoryMetrics(companyId),
     getCompanyData(companyId),
   ]);

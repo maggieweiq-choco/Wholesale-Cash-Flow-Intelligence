@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runFinancingAgent } from "@/agents/financing-agent";
 import { getWorstGap } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
+import { describeAgentError } from "@/lib/claude";
 
 // Compares financing options for the projected cash flow gap. If gapAmount
 // isn't supplied, it's derived from the stored forecast (worst day).
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const recommendation = await runFinancingAgent(companyId, gap);
-  return NextResponse.json(recommendation);
+  try {
+    const recommendation = await runFinancingAgent(companyId, gap);
+    return NextResponse.json(recommendation);
+  } catch {
+    return NextResponse.json({ error: describeAgentError() }, { status: 502 });
+  }
 }

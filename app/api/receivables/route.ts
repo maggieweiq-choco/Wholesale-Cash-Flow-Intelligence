@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { computeCollectionsBase, runReceivablesAgent } from "@/agents/receivables-agent";
 import { getCompanyData } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
+import { describeAgentError } from "@/lib/claude";
 
 // Returns overdue invoices ranked by collections priority. The base
 // ranking (aging x amount x customer reliability) is always the
@@ -14,7 +15,9 @@ export async function GET() {
   }
 
   const [agentResult, companyData] = await Promise.all([
-    runReceivablesAgent(companyId).catch((err) => ({ error: err instanceof Error ? err.message : "Agent failed" })),
+    runReceivablesAgent(companyId).catch((err) => ({
+      error: err instanceof Error && err.message.includes("Upload + normalize first") ? err.message : describeAgentError(),
+    })),
     getCompanyData(companyId),
   ]);
 

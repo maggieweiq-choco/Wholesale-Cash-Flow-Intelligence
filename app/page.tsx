@@ -376,11 +376,13 @@ function InventorySection() {
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
     setError(null);
+    setAiNotice(null);
     try {
       const res = await fetch("/api/inventory");
       const text = await res.text();
@@ -388,7 +390,7 @@ function InventorySection() {
       if (!res.ok) throw new Error(data.error ?? "Failed to load inventory");
       setItems(data.items ?? []);
       setMetrics(data.metrics ?? null);
-      setError(data.agentError ?? null);
+      setAiNotice(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load inventory");
       setItems([]);
@@ -422,6 +424,9 @@ function InventorySection() {
     >
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {aiNotice && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -562,17 +567,19 @@ function ReceivablesSection() {
   const [items, setItems] = useState<CollectionsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     setError(null);
+    setAiNotice(null);
     try {
       const res = await fetch("/api/receivables");
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Failed to load receivables");
       setItems(data.items ?? []);
-      setError(data.agentError ?? null);
+      setAiNotice(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load receivables");
       setItems([]);
@@ -602,6 +609,9 @@ function ReceivablesSection() {
     >
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {aiNotice && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
