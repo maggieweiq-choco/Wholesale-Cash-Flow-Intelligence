@@ -1,4 +1,5 @@
 import type { CollectionsItem } from "@/agents/receivables-agent";
+import { CollectionPriorityBadge } from "@/components/ReceivablesPriorityBoard";
 
 export function ReceivablesTable({ items }: { items: CollectionsItem[] }) {
   if (items.length === 0) {
@@ -13,17 +14,21 @@ export function ReceivablesTable({ items }: { items: CollectionsItem[] }) {
           <th className="py-2 pr-4">Customer</th>
           <th className="py-2 pr-4">Amount</th>
           <th className="py-2 pr-4">Days Overdue</th>
-          <th className="py-2">Priority</th>
+          <th className="py-2 pr-4">Priority</th>
+          <th className="py-2">Score</th>
         </tr>
       </thead>
       <tbody>
         {items.map((item) => (
           <tr key={item.invoiceId} className="border-b border-slate-100 last:border-0">
-            <td className="py-3 pr-4 font-medium text-slate-900">{item.invoiceId}</td>
+            <td className="py-3 pr-4 font-medium text-slate-900">INV-{item.invoiceId}</td>
             <td className="py-3 pr-4 text-slate-600">{item.customerId}</td>
             <td className="py-3 pr-4 text-slate-600">${item.amount.toLocaleString()}</td>
             <td className="py-3 pr-4">
               <OverdueBadge days={item.daysOverdue} />
+            </td>
+            <td className="py-3 pr-4">
+              <CollectionPriorityBadge item={item} />
             </td>
             <td className="py-3 font-medium text-slate-900">{item.priorityScore.toFixed(1)}</td>
           </tr>

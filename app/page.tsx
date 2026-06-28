@@ -9,7 +9,7 @@ import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/
 import { InventoryTierSummary } from "@/components/InventoryTierSummary";
 import { DiscountDistributionChart } from "@/components/DiscountDistributionChart";
 import type { SkuTier } from "@/lib/sku-tiers";
-import { ReceivablesTable } from "@/components/ReceivablesTable";
+import { ReceivablesPriorityBoard } from "@/components/ReceivablesPriorityBoard";
 import { PayablesTable } from "@/components/PayablesTable";
 import { PurchasingTable } from "@/components/PurchasingTable";
 import { PurchasingTierSummary } from "@/components/PurchasingTierSummary";
@@ -203,8 +203,10 @@ function CashFlowSection() {
   }
 
   useEffect(() => {
-    loadProjection();
-    loadForecast();
+    queueMicrotask(() => {
+      void loadProjection();
+      void loadForecast();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -405,7 +407,9 @@ function InventorySection() {
   }
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, []);
 
   const filtered = items.filter(
@@ -552,7 +556,9 @@ function PurchasingSection() {
   }
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, []);
 
   const filtered = items.filter(
@@ -653,14 +659,16 @@ function ReceivablesSection() {
   }
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, []);
 
   return (
     <SectionShell
       id="receivables"
       title="Collections Priority"
-      description="Overdue invoices ranked by aging, amount, and customer payment history."
+      description="ERP-style collections queue, grouped from most urgent to routine follow-up."
       action={
         <button
           type="button"
@@ -682,7 +690,7 @@ function ReceivablesSection() {
         {loading ? (
           <p className="text-sm text-slate-400">Loading…</p>
         ) : (
-          <ReceivablesTable items={items} />
+          <ReceivablesPriorityBoard items={items} />
         )}
       </div>
     </SectionShell>
@@ -713,7 +721,9 @@ function PayablesSection() {
   }
 
   useEffect(() => {
-    load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, []);
 
   return (
