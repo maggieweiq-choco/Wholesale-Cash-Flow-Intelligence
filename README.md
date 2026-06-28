@@ -4,8 +4,6 @@
 >
 > Tells wholesale business owners: "On day 45, you'll be short $23,000 — should you liquidate inventory or take a loan?"
 
----
-
 ## The Problem
 
 Wholesalers get squeezed from both sides: cash locked in warehouse inventory and cash locked in customer payment terms (net 30/60/90). Most owners manage this with Excel or gut instinct — both wildly inaccurate.
@@ -14,8 +12,6 @@ This app uses AI agents to analyze SKU sales history, current inventory, outstan
 - Show a deterministic 90-day cash runway built from real AR/AP data
 - Surface exactly which slow-moving SKUs and overdue customers are causing the squeeze
 - Recommend whether to liquidate inventory, chase payments, or take financing — with true APR comparisons
-
----
 
 ## Dashboard Sections
 
@@ -67,8 +63,6 @@ Slow-moving SKU analysis driven entirely by Aurora data:
 - APR-normalized comparison table: Bank Loan / AR Finance / Liquidate Inventory
 - APR = (cost ÷ raised) × (365 ÷ days) — only for time-priced instruments; liquidation shows "one-time haircut" to avoid misleading annualization of a 33% → ~240% APR
 - Columns: Option | Cash Raised | Cost per $1 | Liquidity Days | APR
-
----
 
 ## Architecture
 
@@ -125,7 +119,6 @@ All agents use Claude's tool-use API to return structured JSON — no free-form 
 - **APR normalization.** Liquidating inventory at a 33% haircut is not comparable to a 10% annual loan. The financing table shows true annualized APR only for time-priced instruments.
 - **Dual-line cash vs profit chart.** The vertical gap between the cash balance line and the accrual P&L line at any point in time equals the working capital deployed in AR + inventory − AP — visually explaining why profitable businesses run out of cash.
 
----
 
 ## Data Flow
 
@@ -146,7 +139,6 @@ CSV formats accepted:
 | `invoices.csv` | `customer_id`, `customer_name`, `amount`, `issued_at`, `due_at` (+ optional: `paid_at`) |
 | `payables.csv` | `vendor_id`, `vendor_name`, `amount`, `issued_at`, `due_at` (+ optional: `paid_at`) |
 
----
 
 ## Local Development
 
@@ -172,8 +164,6 @@ AURORA_SECRET_ARN=
 CRON_SECRET=
 ```
 
----
-
 ## Roadmap
 
 **ERP / Accounting Integrations** — CSV upload is the MVP path. Direct integrations would sync data automatically:
@@ -188,8 +178,6 @@ CRON_SECRET=
 Each would connect via OAuth2 into the same DynamoDB → Aurora normalization pipeline — no agent or dashboard changes needed, only the ingestion source.
 
 **Purchasing → Projection feedback** — purchasing recommendations (estimated reorder spend × lead time) could appear as projected AP outflows in the cash timeline automatically.
-
----
 
 ## Judging Criteria
 
