@@ -1,27 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PurchasingTable } from "@/components/PurchasingTable";
 import { PurchasingTierSummary } from "@/components/PurchasingTierSummary";
 import { TierFilterButtons } from "@/components/TierFilterButtons";
+import { UrgencyFilterButtons } from "@/components/UrgencyFilterButtons";
 import type { PurchasingItem } from "@/agents/purchasing-agent";
 import { downloadCsv } from "@/lib/csv-export";
 import type { SkuTier } from "@/lib/sku-tiers";
 
 const VALID_TIERS: SkuTier[] = ["A", "B", "C", "D"];
+const VALID_URGENCY: PurchasingItem["urgency"][] = ["reorder_now", "reorder_soon", "healthy"];
 
 export default function PurchasingDetailsPage() {
+  return (
+    <Suspense fallback={<DetailsFallback />}>
+      <PurchasingDetailsContent />
+    </Suspense>
+  );
+}
+
+function PurchasingDetailsContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<PurchasingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Seeded from the dashboard's filter state (passed via ?search=&tiers=) so
-  // following "View full list" doesn't make you re-apply the same filters.
+  // Seeded from the dashboard's filter state (passed via ?search=&tiers=&urgency=)
+  // so following "View full list" doesn't make you re-apply the same filters.
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [tierFilter, setTierFilter] = useState<Set<SkuTier>>(
     () => new Set((searchParams.get("tiers")?.split(",").filter((t): t is SkuTier => VALID_TIERS.includes(t as SkuTier)) ?? []))
+  );
+  const [urgencyFilter, setUrgencyFilter] = useState<Set<PurchasingItem["urgency"]>>(
+    () =>
+      new Set(
+        searchParams
+          .get("urgency")
+          ?.split(",")
+          .filter((u): u is PurchasingItem["urgency"] => VALID_URGENCY.includes(u as PurchasingItem["urgency"])) ?? []
+      )
   );
 
   useEffect(() => {
@@ -40,9 +59,10 @@ export default function PurchasingDetailsPage() {
     return items.filter((item) => {
       const matchesSearch = item.sku.toLowerCase().includes(search.toLowerCase());
       const matchesTier = tierFilter.size === 0 || tierFilter.has(item.tier);
-      return matchesSearch && matchesTier;
+      const matchesUrgency = urgencyFilter.size === 0 || urgencyFilter.has(item.urgency);
+      return matchesSearch && matchesTier && matchesUrgency;
     });
-  }, [items, search, tierFilter]);
+  }, [items, search, tierFilter, urgencyFilter]);
 
   function handleExport() {
     downloadCsv(
@@ -92,12 +112,14 @@ export default function PurchasingDetailsPage() {
           className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
         />
         <TierFilterButtons selected={tierFilter} onChange={setTierFilter} />
-        {(search || tierFilter.size > 0) && (
+        <UrgencyFilterButtons selected={urgencyFilter} onChange={setUrgencyFilter} />
+        {(search || tierFilter.size > 0 || urgencyFilter.size > 0) && (
           <button
             type="button"
             onClick={() => {
               setSearch("");
               setTierFilter(new Set());
+              setUrgencyFilter(new Set());
             }}
             className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-900"
           >
@@ -109,6 +131,22 @@ export default function PurchasingDetailsPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PurchasingTable items={filtered} />}
+      </div>
+    </main>
+  );
+}
+
+function DetailsFallback() {
+  return (
+    <main className="flex flex-1 flex-col gap-6 max-w-5xl mx-auto w-full px-6 py-10">
+      <div>
+        <Link href="/#purchasing" className="text-xs font-medium text-slate-500 hover:text-slate-900">
+          ← Back to Dashboard
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Purchasing — Full List</h1>
+      </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-400">Loading…</p>
       </div>
     </main>
   );

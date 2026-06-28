@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wholesale Cash Flow Intelligence — 架构与产品分析</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e;
+    --blue:#79c0ff; --green:#56d364; --purple:#d2a8ff; --orange:#e3b341; --red:#ff7b72; --teal:#76e4f7;
+    --blue-bg:rgba(37,99,235,0.15); --green-bg:rgba(22,163,74,0.15); --purple-bg:rgba(124,58,237,0.15);
+    --orange-bg:rgba(217,119,6,0.15); --red-bg:rgba(220,38,38,0.15); --teal-bg:rgba(8,145,178,0.15);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
+    line-height:1.6; padding:0 0 80px;
+  }
+  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+  header.hero{
+    padding:56px 28px 40px; border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(37,99,235,0.08), transparent);
+  }
+  header.hero .wrap{display:flex; flex-direction:column; gap:10px;}
+  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); font-weight:700;}
+  h1{font-size:30px; margin:0; color:#fff; font-weight:800;}
+  .hero-sub{color:var(--muted); font-size:14px; max-width:760px;}
+  .meta-row{display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--muted);}
+  .meta-row b{color:var(--text);}
+  section{padding:48px 0; border-bottom:1px solid var(--border);}
+  section:last-child{border-bottom:none;}
+  h2{font-size:20px; color:#fff; margin:0 0 6px; display:flex; align-items:center; gap:10px;}
+  .num{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border-radius:7px; background:var(--blue-bg); color:var(--blue);
+    font-size:13px; font-weight:800;
+  }
+  .section-desc{color:var(--muted); font-size:13px; margin:0 0 24px; max-width:820px;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 20px;}
+  .card h3{margin:0 0 8px; font-size:14px; color:var(--blue);}
+  .card p{margin:0; font-size:13px; color:var(--muted);}
+  table{width:100%; border-collapse:collapse; font-size:13px; background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;}
+  thead th{
+    text-align:left; padding:10px 14px; background:rgba(255,255,255,0.03);
+    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    border-bottom:1px solid var(--border);
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  code, .mono{font-family:'SF Mono','Fira Code',Consolas,monospace; font-size:12.5px;}
+  .mono-cell{color:var(--teal);}
+  .tag{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:5px; white-space:nowrap;}
+  .tag-blue{background:var(--blue-bg); color:var(--blue);}
+  .tag-green{background:var(--green-bg); color:var(--green);}
+  .tag-purple{background:var(--purple-bg); color:var(--purple);}
+  .tag-orange{background:var(--orange-bg); color:var(--orange);}
+  .tag-red{background:var(--red-bg); color:var(--red);}
+  .tag-teal{background:var(--teal-bg); color:var(--teal);}
+  .status-done{color:var(--green); font-weight:700;}
+  .status-partial{color:var(--orange); font-weight:700;}
+  .status-missing{color:var(--red); font-weight:700;}
+  .grid2{display:grid; grid-template-columns:1.1fr .9fr; gap:20px;}
+  @media (max-width:880px){.grid2{grid-template-columns:1fr;}}
+  .pipeline{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; margin:18px 0;}
+  .pstep{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text);}
+  .pstep b{color:var(--blue);}
+  .parrow{color:var(--muted);}
+  .quote{
+    border-left:3px solid var(--blue); padding:10px 16px; color:var(--muted); font-size:13px;
+    background:rgba(255,255,255,0.02); border-radius:0 8px 8px 0; margin:14px 0;
+  }
+  .toc{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .toc a{
+    font-size:12.5px; color:var(--blue); text-decoration:none; background:var(--panel);
+    border:1px solid var(--border); padding:6px 12px; border-radius:20px;
+  }
+  .toc a:hover{border-color:var(--blue);}
+  ul.clean{margin:0; padding-left:18px; font-size:13px; color:var(--text);}
+  ul.clean li{margin-bottom:6px;}
+  svg text{font-family:-apple-system,sans-serif;}
+  .folder{color:var(--blue);} .file{color:var(--text);} .comment{color:#484f58; font-size:11px;}
+  .indent1{padding-left:18px;} .indent2{padding-left:36px;}
+  .frow{display:flex; align-items:baseline; gap:0; margin:1px 0; font-size:12.5px;}
+  .arrow{color:#484f58; margin-right:4px;}
+  footer{padding:36px 28px; text-align:center; color:var(--muted); font-size:12px;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">H0 Hackathon · B2B Track · 完整产品与架构分析</div>
+    <h1>Wholesale Cash Flow Intelligence</h1>
+    <p class="hero-sub">基于现有代码仓库逐文件分析生成。覆盖产品定位、技术栈、系统架构、数据模型、关键架构决策、功能实现状态、已知缺口与提交清单对照。</p>
+    <div class="meta-row">
+      <span><b>截止日期</b> 2026-06-29</span>
+      <span><b>分析日期</b> 2026-06-22</span>
+      <span><b>提交方向</b> Track 2 — B2B</span>
+      <span><b>贡献者</b> Maggie (maggieweiq) · Kira Zhang</span>
+      <span><b>Commits</b> 7</span>
+    </div>
+    <div class="toc">
+      <a href="#product">① 产品分析</a>
+      <a href="#stack">② 技术栈与环境</a>
+      <a href="#structure">③ 代码结构</a>
+      <a href="#arch">④ 系统架构</a>
+      <a href="#datamodel">⑤ 数据模型</a>
+      <a href="#functions">⑥ 功能清单</a>
+      <a href="#decisions">⑦ 关键架构决策</a>
+      <a href="#gaps">⑧ 已知缺口与风险</a>
+      <a href="#checklist">⑨ 提交清单对照</a>
+      <a href="#next">⑩ 建议下一步</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- 1. PRODUCT ANALYSIS -->
+<section id="product">
+  <h2><span class="num">1</span>产品分析</h2>
+  <p class="section-desc">从代码（README、页面文案、agent prompt）反推出的产品定位与价值主张。</p>
+
+  <div class="quote">"On day 45, you'll be short $23,000 — should you liquidate inventory or take a loan?" — 产品一句话定位</div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>目标用户</h3>
+      <p>批发商老板 / 财务负责人（中小型 wholesale SMB）。两边被夹：现金压在仓库库存里，现金压在客户账期（net 30/60/90）里。目前多用 Excel 或直觉判断，误差很大。</p>
+    </div>
+    <div class="card">
+      <h3>核心问题</h3>
+      <p>不知道未来现金缺口何时出现、有多大；不知道该先清库存、先催账，还是先借钱；三者互相影响，单看一个维度容易做错决策。</p>
+    </div>
+    <div class="card">
+      <h3>解法</h3>
+      <p>用 Claude agent 把销售历史、库存、应收账款三类数据喂给模型，产出 90 天逐日现金流时间线 + 死货清单 + 催收优先级 + 融资方案对比，四件事联动给一个最终建议。</p>
+    </div>
+    <div class="card">
+      <h3>商业模式</h3>
+      <p>当前代码未实现计费/订阅逻辑（无 pricing/billing 相关文件），定价策略尚未落地到产品中，停留在概念阶段。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. STACK -->
+<section id="stack">
+  <h2><span class="num">2</span>技术栈与产品环境</h2>
+  <p class="section-desc">来自 <code class="mono">package.json</code>、<code class="mono">.env.local.example</code>、<code class="mono">vercel.json</code> 的实际依赖与运行环境。</p>
+
+  <table>
+    <thead><tr><th>层级</th><th>技术</th><th>版本</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-green">前端</span></td><td class="mono-cell">Next.js (App Router)</td><td class="mono">16.2.9</td><td>页面路由 + Route Handlers，部署在 Vercel</td></tr>
+      <tr><td><span class="tag tag-green">前端</span></td><td class="mono-cell">React</td><td class="mono">19.2.4</td><td>UI 渲染</td></tr>
+      <tr><td><span class="tag tag-green">前端</span></td><td class="mono-cell">Tailwind CSS</td><td class="mono">v4</td><td>样式（utility class，未见自定义主题）</td></tr>
+      <tr><td><span class="tag tag-green">前端</span></td><td class="mono-cell">Recharts</td><td class="mono">^2.13.3</td><td>现金流折线图（<code class="mono">CashflowChart</code>，见 §8 缺口）</td></tr>
+      <tr><td><span class="tag tag-purple">AI</span></td><td class="mono-cell">@anthropic-ai/sdk</td><td class="mono">^0.32.1</td><td>4 个 Claude agent，全部用 <code class="mono">tool_choice: forced tool</code> 强制结构化输出</td></tr>
+      <tr><td><span class="tag tag-purple">AI</span></td><td class="mono-cell">claude-sonnet-4-6</td><td class="mono">—</td><td>写死在 <code class="mono">lib/claude.ts</code> 的模型名</td></tr>
+      <tr><td><span class="tag tag-orange">数据库</span></td><td class="mono-cell">Aurora PostgreSQL Serverless v2</td><td class="mono">via Data API</td><td>结构化数据：销售/库存/发票/客户/预测/融资方案</td></tr>
+      <tr><td><span class="tag tag-orange">数据库</span></td><td class="mono-cell">DynamoDB</td><td class="mono">on-demand</td><td>原始上传数据落地（<code class="mono">cashflow-raw</code> 表）</td></tr>
+      <tr><td><span class="tag tag-orange">ORM</span></td><td class="mono-cell">Drizzle ORM</td><td class="mono">^0.36.4</td><td>Aurora schema 定义 + 查询，走 <code class="mono">aws-data-api/pg</code> 驱动</td></tr>
+      <tr><td><span class="tag tag-teal">AWS</span></td><td class="mono-cell">Bedrock Runtime（Titan Embeddings v2）</td><td class="mono">^3.700.0</td><td>已写好 <code class="mono">embedText()</code>，但<b>全仓库无任何调用</b>——见 §8</td></tr>
+      <tr><td><span class="tag tag-red">基础设施</span></td><td class="mono-cell">Vercel Cron</td><td class="mono">daily 06:00 UTC</td><td>调用 <code class="mono">/api/cron</code> 刷新所有公司的预测</td></tr>
+      <tr><td><span class="tag tag-blue">校验</span></td><td class="mono-cell">Zod</td><td class="mono">^3.24.1</td><td>已安装，但代码中<b>未见任何 schema 校验调用</b></td></tr>
+      <tr><td><span class="tag tag-blue">工具</span></td><td class="mono-cell">PapaParse</td><td class="mono">^5.4.1</td><td>CSV 解析（<code class="mono">lib/csv-parser.ts</code>）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cards" style="margin-top:18px;">
+    <div class="card">
+      <h3>环境变量（.env.local.example）</h3>
+      <p class="mono" style="color:var(--text);">AWS_ACCESS_KEY_ID · AWS_SECRET_ACCESS_KEY · AWS_REGION · AURORA_CLUSTER_ARN · AURORA_SECRET_ARN · AURORA_DATABASE · DYNAMO_TABLE_NAME · ANTHROPIC_API_KEY · BEDROCK_REGION · CRON_SECRET</p>
+    </div>
+    <div class="card">
+      <h3>部署要求满足情况</h3>
+      <p>✅ Vercel 部署（<code class="mono">vercel.json</code> 含 cron 配置）　✅ Aurora PostgreSQL + DynamoDB 双数据库满足"三选一/组合"要求</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. STRUCTURE -->
+<section id="structure">
+  <h2><span class="num">3</span>代码结构（按实际仓库核对）</h2>
+  <p class="section-desc">下表是规划稿（code-structure.html）与当前仓库实际文件的逐项核对——规划已 100% 落地，且比规划多出 2 个文件。</p>
+
+  <div class="cards">
+    <div class="card">
+      <h3 style="color:var(--blue)">📁 app/</h3>
+      <div class="frow"><span class="folder">page.tsx</span></div><div class="comment indent1"># Dashboard 首页（仅导航，无数据展示）</div>
+      <div class="frow indent1"><span class="folder">upload/page.tsx</span></div>
+      <div class="frow indent1"><span class="folder">inventory/page.tsx</span></div>
+      <div class="frow indent1"><span class="folder">receivables/page.tsx</span></div>
+      <div class="frow indent1"><span class="folder">financing/page.tsx</span></div>
+      <div class="comment indent1"># 无 cashflow/forecast 页面 — 见 §8</div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--purple)">🔌 app/api/</h3>
+      <div class="frow"><span class="file">upload/route.ts</span></div>
+      <div class="frow"><span class="file">normalize/route.ts</span><span class="tag tag-orange" style="margin-left:8px;">规划外新增</span></div>
+      <div class="frow"><span class="file">forecast/route.ts</span></div>
+      <div class="frow"><span class="file">inventory/route.ts</span></div>
+      <div class="frow"><span class="file">receivables/route.ts</span></div>
+      <div class="frow"><span class="file">financing/route.ts</span></div>
+      <div class="frow"><span class="file">cron/route.ts</span></div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--teal)">🤖 agents/</h3>
+      <div class="frow"><span class="file">cashflow-agent.ts</span></div>
+      <div class="frow"><span class="file">inventory-agent.ts</span></div>
+      <div class="frow"><span class="file">receivables-agent.ts</span></div>
+      <div class="frow"><span class="file">financing-agent.ts</span></div>
+      <div class="frow"><span class="file">tools.ts</span></div>
+      <div class="comment indent1"># 4 个 tool schema，全部 required 字段齐全</div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--orange)">🗄️ db/ + lib/</h3>
+      <div class="frow"><span class="file">db/schema.ts</span><span class="comment" style="margin-left:6px;">6 张 Aurora 表</span></div>
+      <div class="frow"><span class="file">db/dynamo.ts</span><span class="comment" style="margin-left:6px;">RawUploadRow 接口</span></div>
+      <div class="frow"><span class="file">lib/aurora.ts · dynamo.ts · claude.ts · bedrock.ts · csv-parser.ts</span></div>
+      <div class="frow"><span class="file">lib/etl.ts</span><span class="tag tag-orange" style="margin-left:8px;">规划外新增</span></div>
+      <div class="frow"><span class="file">lib/queries.ts</span><span class="tag tag-orange" style="margin-left:8px;">规划外新增</span></div>
+    </div>
+  </div>
+  <p class="section-desc" style="margin-top:16px;">规划外新增的 <code class="mono">etl.ts</code> / <code class="mono">queries.ts</code> / <code class="mono">normalize/route.ts</code> 是第二次提交（commit <code class="mono">b5645f1</code>）补的——把 DynamoDB 原始数据清洗进 Aurora的，并修复了"agent 没数据瞎编数字"的核心 bug（见 §7）。</p>
+</section>
+
+<!-- 4. ARCHITECTURE DIAGRAM -->
+<section id="arch">
+  <h2><span class="num">4</span>系统架构图</h2>
+  <p class="section-desc">双数据库 + 4 agent 的实际数据流向（非规划，按代码逻辑还原）。</p>
+
+  <svg viewBox="0 0 1120 460" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
+    <defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#8b949e"/>
+      </marker>
+    </defs>
+
+    <!-- Frontend -->
+    <rect x="20" y="20" width="200" height="90" rx="10" fill="#161b22" stroke="#2563eb" stroke-width="1.5"/>
+    <text x="120" y="44" fill="#79c0ff" font-size="13" font-weight="700" text-anchor="middle">Next.js Frontend</text>
+    <text x="120" y="64" fill="#8b949e" font-size="11" text-anchor="middle">Vercel 部署</text>
+    <text x="120" y="80" fill="#8b949e" font-size="11" text-anchor="middle">5 个页面 + CSV 上传表单</text>
+    <text x="120" y="96" fill="#8b949e" font-size="11" text-anchor="middle">client fetch → API routes</text>
+
+    <!-- Upload API -->
+    <rect x="280" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="375" y="44" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">/api/upload</text>
+    <text x="375" y="64" fill="#8b949e" font-size="11" text-anchor="middle">CSV → PapaParse</text>
+    <text x="375" y="80" fill="#8b949e" font-size="11" text-anchor="middle">按行写入 Dynamo</text>
+
+    <!-- DynamoDB -->
+    <rect x="530" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#d97706" stroke-width="1.5"/>
+    <text x="625" y="44" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">DynamoDB</text>
+    <text x="625" y="64" fill="#8b949e" font-size="11" text-anchor="middle">cashflow-raw</text>
+    <text x="625" y="80" fill="#8b949e" font-size="11" text-anchor="middle">PK companyId / SK rowId</text>
+    <text x="625" y="96" fill="#8b949e" font-size="11" text-anchor="middle">原始未清洗行</text>
+
+    <!-- normalize -->
+    <rect x="780" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="875" y="44" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">/api/normalize</text>
+    <text x="875" y="64" fill="#8b949e" font-size="11" text-anchor="middle">lib/etl.ts</text>
+    <text x="875" y="80" fill="#8b949e" font-size="11" text-anchor="middle">清空旧数据 → 重新写入</text>
+    <text x="875" y="96" fill="#8b949e" font-size="11" text-anchor="middle">派生 customers 表</text>
+
+    <!-- Aurora -->
+    <rect x="780" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#d97706" stroke-width="1.5"/>
+    <text x="875" y="174" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">Aurora PostgreSQL</text>
+    <text x="875" y="194" fill="#8b949e" font-size="11" text-anchor="middle">Serverless v2 · Data API</text>
+    <text x="875" y="210" fill="#8b949e" font-size="11" text-anchor="middle">6 张表 · Drizzle ORM</text>
+    <text x="875" y="226" fill="#8b949e" font-size="11" text-anchor="middle">sales / inventory / invoices</text>
+    <text x="875" y="242" fill="#8b949e" font-size="11" text-anchor="middle">customers / forecast / loans</text>
+
+    <!-- Agents -->
+    <rect x="530" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#0891b2" stroke-width="1.5"/>
+    <text x="625" y="174" fill="#76e4f7" font-size="13" font-weight="700" text-anchor="middle">4 个 Claude Agent</text>
+    <text x="625" y="194" fill="#8b949e" font-size="11" text-anchor="middle">cashflow / inventory</text>
+    <text x="625" y="210" fill="#8b949e" font-size="11" text-anchor="middle">receivables / financing</text>
+    <text x="625" y="228" fill="#8b949e" font-size="11" text-anchor="middle">tool_choice 强制结构化输出</text>
+    <text x="625" y="244" fill="#8b949e" font-size="11" text-anchor="middle">getCompanyData() 注入真实数据</text>
+
+    <!-- API result routes -->
+    <rect x="280" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
+    <text x="375" y="174" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">结果 API</text>
+    <text x="375" y="194" fill="#8b949e" font-size="11" text-anchor="middle">/forecast /inventory</text>
+    <text x="375" y="210" fill="#8b949e" font-size="11" text-anchor="middle">/receivables /financing</text>
+    <text x="375" y="228" fill="#8b949e" font-size="11" text-anchor="middle">把 agent 结果存回 Aurora</text>
+    <text x="375" y="244" fill="#8b949e" font-size="11" text-anchor="middle">或直接返回给前端</text>
+
+    <!-- Cron -->
+    <rect x="280" y="300" width="440" height="70" rx="10" fill="#161b22" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="500" y="324" fill="#ff7b72" font-size="13" font-weight="700" text-anchor="middle">/api/cron · Vercel Cron 每天 06:00 UTC</text>
+    <text x="500" y="344" fill="#8b949e" font-size="11" text-anchor="middle">遍历所有 companyId → 重跑 cashflow agent → 覆盖写回 Aurora</text>
+    <text x="500" y="358" fill="#8b949e" font-size="11" text-anchor="middle">需 Bearer CRON_SECRET；单家失败仅记为 -1，不重试不报警</text>
+
+    <!-- Bedrock unused -->
+    <rect x="780" y="300" width="190" height="70" rx="10" fill="#161b22" stroke="#484f58" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="875" y="324" fill="#8b949e" font-size="13" font-weight="700" text-anchor="middle">Bedrock Titan Embed</text>
+    <text x="875" y="344" fill="#8b949e" font-size="11" text-anchor="middle">lib/bedrock.ts 已写好</text>
+    <text x="875" y="358" fill="#ff7b72" font-size="11" text-anchor="middle">⚠ 零调用，未接入任何流程</text>
+
+    <!-- arrows -->
+    <line x1="220" y1="65" x2="278" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="470" y1="65" x2="528" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <line x1="625" y1="110" x2="625" y2="148" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
+    <text x="640" y="132" fill="#8b949e" font-size="10">companyId 触发</text>
+    <line x1="780" y1="65" x2="722" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="745" y="56" fill="#8b949e" font-size="10">读取原始行</text>
+    <line x1="875" y1="110" x2="875" y2="148" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="890" y="132" fill="#8b949e" font-size="10">清洗写入</text>
+    <line x1="780" y1="205" x2="722" y2="205" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="745" y="196" fill="#8b949e" font-size="10">查真实数据</text>
+    <line x1="530" y1="205" x2="472" y2="205" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="490" y="196" fill="#8b949e" font-size="10">结构化结果</text>
+    <line x1="375" y1="150" x2="200" y2="112" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="260" y="125" fill="#8b949e" font-size="10">JSON 返回</text>
+    <line x1="500" y1="298" x2="500" y2="262" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  </svg>
+</section>
+
+<!-- 5. DATA MODEL -->
+<section id="datamodel">
+  <h2><span class="num">5</span>数据模型</h2>
+  <p class="section-desc">DynamoDB 一张原始表 + Aurora PostgreSQL 六张结构化表（<code class="mono">db/schema.ts</code>，Drizzle 定义）。</p>
+
+  <h3 style="font-size:14px; color:var(--orange); margin:0 0 10px;">DynamoDB — cashflow-raw</h3>
+  <table style="margin-bottom:24px;">
+    <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="mono-cell">companyId</td><td class="mono">string (PK)</td><td>租户隔离 key</td></tr>
+      <tr><td class="mono-cell">rowId</td><td class="mono">string (SK)</td><td><code class="mono">uploadId#rowIndex</code></td></tr>
+      <tr><td class="mono-cell">type</td><td class="mono">"sales"|"inventory"|"invoice"</td><td>原始数据种类</td></tr>
+      <tr><td class="mono-cell">data</td><td class="mono">Record&lt;string,string&gt;</td><td>CSV 行的原始字段，未做类型转换</td></tr>
+      <tr><td class="mono-cell">uploadedAt</td><td class="mono">ISO string</td><td>上传时间</td></tr>
+    </tbody>
+  </table>
+
+  <h3 style="font-size:14px; color:var(--blue); margin:0 0 10px;">Aurora PostgreSQL（6 张表）</h3>
+  <table>
+    <thead><tr><th>表</th><th>关键字段</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td class="mono-cell">sku_sales_history</td><td class="mono">sku, sold_qty, revenue, sold_at</td><td>销售速度计算基础，喂给 cashflow / inventory agent</td></tr>
+      <tr><td class="mono-cell">inventory</td><td class="mono">sku, qty_on_hand, unit_cost</td><td>库存现值 + 死货判断输入</td></tr>
+      <tr><td class="mono-cell">invoices</td><td class="mono">customer_id, amount, issued_at, due_at, paid_at, status</td><td>应收账款明细，cashflow / receivables / financing 三个 agent 共用</td></tr>
+      <tr><td class="mono-cell">customers</td><td class="mono">avg_days_late, payment_score(1-10)</td><td><b>由 invoices 派生</b>（lib/etl.ts 计算，非用户直接上传）</td></tr>
+      <tr><td class="mono-cell">cash_flow_forecast</td><td class="mono">forecast_dt, cash_in, cash_out, balance, gap</td><td>cashflow agent 输出落地，cron 每日覆盖重写</td></tr>
+      <tr><td class="mono-cell">loan_scenarios</td><td class="mono">option_type, amount, duration_days, estimated_cost, recommended</td><td>financing agent 输出落地（<b>注：API 当前未实际写入此表</b>，见 §8）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="quote">customers.payment_score 计算公式（lib/etl.ts）：<code class="mono">score = clamp(10 - avgDaysLate/5, 1, 10)</code> — 0 天迟付 = 10 分，约 45 天迟付 = 1 分。</div>
+</section>
+
+<!-- 6. FUNCTION LIST -->
+<section id="functions">
+  <h2><span class="num">6</span>功能清单（页面 / API / Agent 三层对照）</h2>
+  <table>
+    <thead><tr><th>功能</th><th>前端页面</th><th>API</th><th>Agent / 逻辑</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>数据上传</td><td class="mono">/upload</td><td class="mono">POST /api/upload</td><td>PapaParse → DynamoDB</td><td class="status-done">✅ 完整</td></tr>
+      <tr><td>清洗归一化</td><td>— 无 UI，需手动调用</td><td class="mono">POST /api/normalize</td><td>lib/etl.ts：Dynamo → Aurora，幂等（先删后插）</td><td class="status-partial">⚠ 无前端入口，靠 seed.sh / curl</td></tr>
+      <tr><td>90天现金流预测</td><td>— <b>无展示页面</b></td><td class="mono">POST/GET /api/forecast</td><td>cashflow-agent：tool 强制输出 90 天逐日 cashIn/cashOut/balance/gap</td><td class="status-missing">❌ 核心功能无 UI</td></tr>
+      <tr><td>死货清单</td><td class="mono">/inventory</td><td class="mono">GET /api/inventory</td><td>inventory-agent：days-of-supply + 折扣建议</td><td class="status-done">✅ 完整</td></tr>
+      <tr><td>催收优先级</td><td class="mono">/receivables</td><td class="mono">GET /api/receivables</td><td>receivables-agent：账龄 × 金额 × 客户信用评分</td><td class="status-done">✅ 完整</td></tr>
+      <tr><td>融资方案对比</td><td class="mono">/financing</td><td class="mono">POST /api/financing</td><td>financing-agent：bank_loan / liquidate / ar_finance 三选</td><td class="status-done">✅ 完整（手动输入 gapAmount 或自动取最差缺口）</td></tr>
+      <tr><td>每日自动刷新</td><td>—</td><td class="mono">GET /api/cron</td><td>遍历所有 companyId 重跑 cashflow-agent</td><td class="status-partial">⚠ 仅刷新 cashflow，不刷新其他3个 agent；失败无告警</td></tr>
+      <tr><td>审计合规预警<br><span class="comment" style="font-size:11px;">(README 列出的功能)</span></td><td>—</td><td>—</td><td>—</td><td class="status-missing">❌ 全仓库无对应代码</td></tr>
+      <tr><td>语义去重 / Embedding</td><td>—</td><td>—</td><td>lib/bedrock.ts::embedText()</td><td class="status-missing">❌ 已写函数，零调用</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 7. KEY DECISIONS -->
+<section id="decisions">
+  <h2><span class="num">7</span>关键架构决策与理由</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>为什么 DynamoDB + Aurora 双库，而不是只用一个</h3>
+      <p>DynamoDB 吃高频、无结构的原始上传（CSV 行直接落地，字段是 <code class="mono">Record&lt;string,string&gt;</code>，不强制类型）。Aurora 存清洗后的强类型表，供 agent 查询和前端展示用结构化 SQL。这正好对应 Hackathon"数据库三选一/组合"的加分点——单数据库也能做完，但双库故事更贴技术要求。</p>
+    </div>
+    <div class="card">
+      <h3>为什么走 RDS Data API 而不是直连 Postgres</h3>
+      <p><code class="mono">lib/aurora.ts</code> 用 <code class="mono">RDSDataClient</code> + <code class="mono">drizzle-orm/aws-data-api/pg</code>，SETUP.md 明确写"避免 serverless 打爆连接池"——Vercel 的每次请求起一个新的 serverless 函数实例，直连 Postgres 容易耗尽连接数，Data API 走 HTTP，无连接池问题。</p>
+    </div>
+    <div class="card">
+      <h3>为什么 4 个 agent 全用 tool_choice 强制工具调用</h3>
+      <p><code class="mono">tools.ts</code> 定义 4 个 schema，每次调用都 <code class="mono">tool_choice:{type:"tool", name:...}</code> 强制 Claude 必须用工具返回，不允许自由文本。这保证返回值永远是可解析的 JSON 结构，前端/数据库写入不需要做容错解析。</p>
+    </div>
+    <div class="card">
+      <h3>核心 bug 修复：agent 曾经"瞎编数字"</h3>
+      <p><code class="mono">lib/queries.ts</code> 注释原话："This is the fix for the core bug: agents used to prompt Claude with no data, so it invented numbers." 现在所有 4 个 agent 调用前都先 <code class="mono">getCompanyData()</code> 把 Aurora 里的真实行 JSON.stringify 进 prompt，杜绝模型瞎猜。</p>
+    </div>
+    <div class="card">
+      <h3>为什么 normalize 是"先删全部再插入"</h3>
+      <p><code class="mono">lib/etl.ts</code> 注释写明"Idempotent: wipes the company's existing rows first so re-running an upload doesn't duplicate"。简单粗暴但避免了重复上传导致销售/库存数字翻倍这种更致命的错误，11天冲刺期内是合理取舍。</p>
+    </div>
+    <div class="card">
+      <h3>customers 表是派生表，不是用户直传</h3>
+      <p>用户只上传 sales/inventory/invoices 三种 CSV，customers 的 <code class="mono">avg_days_late</code> 和 <code class="mono">payment_score</code> 完全由 <code class="mono">lib/etl.ts</code> 在 normalize 阶段从 invoices 的 <code class="mono">paid_at vs due_at</code> 计算得出——减少了用户填表负担，是个干净的设计。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. GAPS -->
+<section id="gaps">
+  <h2><span class="num">8</span>已知缺口与风险（按影响排序）</h2>
+  <table>
+    <thead><tr><th>缺口</th><th>影响</th><th>证据</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>主打功能"90天现金流时间线"没有展示页面</b></td>
+        <td class="status-missing">高 — README 头一句话卖点（"on day 45 you'll be short $23,000"）评委点开 demo 看不到对应页面，只有 <code class="mono">/inventory</code> <code class="mono">/receivables</code> <code class="mono">/financing</code> 三个子页</td>
+        <td>grep 全仓库，<code class="mono">CashflowChart.tsx</code> 组件存在但零处被 import；<code class="mono">app/</code> 下无 <code class="mono">cashflow</code> 或 <code class="mono">forecast</code> 路由</td>
+      </tr>
+      <tr>
+        <td>无多租户访问控制</td>
+        <td class="status-partial">中 — <code class="mono">companyId</code> 是任意字符串，任何人输入别人的 company id 就能看到别人的数据/财务建议</td>
+        <td>所有 API route 直接 <code class="mono">request.json().companyId</code>，无 session/auth 校验</td>
+      </tr>
+      <tr>
+        <td>cron 失败静默</td>
+        <td class="status-partial">中 — 某公司当天预测刷新失败只记 <code class="mono">-1</code>，无重试、无告警，第二天 dashboard 数据可能是过期的</td>
+        <td><code class="mono">app/api/cron/route.ts</code> 的 <code class="mono">catch { results[companyId] = -1 }</code></td>
+      </tr>
+      <tr>
+        <td>loan_scenarios 表实际未被写入</td>
+        <td class="status-partial">低 — schema 定义了表，但 <code class="mono">/api/financing</code> 只把结果 JSON 返回给前端，没有 insert 到这张表，数据不落地</td>
+        <td><code class="mono">app/api/financing/route.ts</code> 只 <code class="mono">return NextResponse.json(recommendation)</code></td>
+      </tr>
+      <tr>
+        <td>Bedrock embedding 是死代码</td>
+        <td class="status-partial">低（但解释成本高）— SETUP.md 把 Bedrock 列为"on-brand"加分项，但实际产品逻辑完全不需要语义向量（这是从另一个被否决的方向"反馈信号平台"遗留的代码），demo 时如果评委问起容易被问住</td>
+        <td>全局搜索 <code class="mono">embedText</code> 只在定义处出现一次</td>
+      </tr>
+      <tr>
+        <td>"审计合规预警"功能名存实亡</td>
+        <td class="status-partial">低 — README judging criteria 表里写了这条差异化卖点，代码完全没实现</td>
+        <td>全局搜索 audit/compliance/write-off 只匹配到 README 本身</td>
+      </tr>
+      <tr>
+        <td>无输入校验</td>
+        <td class="status-partial">低 — Zod 已装但未使用，CSV 字段缺失/格式错误时（如金额非数字）会直接产出错误数据而不报错</td>
+        <td><code class="mono">lib/etl.ts</code> 用 <code class="mono">Number(d.sold_qty ?? 0)</code> 静默兜底成 0，不抛错</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 9. CHECKLIST -->
+<section id="checklist">
+  <h2><span class="num">9</span>提交清单对照</h2>
+  <table>
+    <thead><tr><th>提交要求</th><th>当前状态</th></tr></thead>
+    <tbody>
+      <tr><td>文字说明（用了哪个 AWS 数据库）</td><td class="status-done">✅ README + SETUP.md 已写清楚 Aurora + DynamoDB 分工</td></tr>
+      <tr><td>3分钟 demo 视频</td><td class="status-missing">❌ 未制作（且建议先补上 §8 的 cashflow 展示页，否则 demo 没有视觉冲击点）</td></tr>
+      <tr><td>Vercel 项目链接 + Team ID</td><td class="status-partial">⚠ vercel.json 已配置 cron，但未确认是否已实际部署到 Vercel（仅见本地 .next 构建缓存）</td></tr>
+      <tr><td>架构图</td><td class="status-done">✅ 本文档 §4 可直接用，或基于此重新单独出图</td></tr>
+      <tr><td>AWS 数据库使用截图</td><td class="status-missing">❌ 未生成（需登录 AWS Console 实际截图）</td></tr>
+      <tr><td>博客/视频 #H0Hackathon（可选加分）</td><td class="status-missing">— 未开始（可选项）</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 10. NEXT STEPS -->
+<section id="next">
+  <h2><span class="num">10</span>建议下一步（距截止 7 天）</h2>
+  <ul class="clean">
+    <li><b>优先级1 — 补 cashflow 展示页</b>：新建 <code class="mono">app/forecast/page.tsx</code>，fetch <code class="mono">/api/forecast?companyId=acme</code>，渲染已存在的 <code class="mono">CashflowChart</code> 组件 + 缺口预警文案。这是 demo 视频最该展示的画面，目前完全缺失。</li>
+    <li><b>优先级2 — 确认 Vercel 实际部署</b>：拿到线上 URL 才能跑 <code class="mono">seed.sh</code> 的远程模式，并满足提交清单"Vercel 项目链接"硬要求。</li>
+    <li><b>优先级3 — 决定 Bedrock 怎么处理</b>：要么删掉 <code class="mono">lib/bedrock.ts</code> 避免评委追问，要么花小成本接一个真用途（比如给死货商品描述做语义聚类）换回"用了 Bedrock"的加分。</li>
+    <li><b>优先级4 — 给 companyId 加最基本的隔离</b>：哪怕只是简单的 URL token 或固定写死 demo 公司，避免被现场提问"任何人能看任何人数据"。</li>
+    <li><b>优先级5 — 录屏前跑通完整 seed.sh 链路</b>，确认 cron/normalize/forecast 三步真实可用，再录 demo。</li>
+  </ul>
+</section>
+
+</div>
+
+<footer>基于仓库当前状态（最新 commit <code class="mono">5aeeeb3</code>）生成 · 2026-06-22</footer>
+
+</body>
+</html>

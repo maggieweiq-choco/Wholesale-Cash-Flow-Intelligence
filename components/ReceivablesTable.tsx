@@ -15,7 +15,14 @@ export function ReceivablesTable({ items }: { items: CollectionsItem[] }) {
           <th className="py-2 pr-4">Amount</th>
           <th className="py-2 pr-4">Days Overdue</th>
           <th className="py-2 pr-4">Priority</th>
-          <th className="py-2">Score</th>
+          <th className="py-2">
+            <span
+              className="cursor-help border-b border-dotted border-slate-400"
+              title="Priority score is a sorting score, not a dollar amount. It combines days overdue, invoice amount, and customer payment risk; higher scores should be collected first."
+            >
+              Score
+            </span>
+          </th>
         </tr>
       </thead>
       <tbody>

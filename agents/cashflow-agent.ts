@@ -1,4 +1,5 @@
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
+import { computeProjection } from "@/lib/projection";
 import { getCompanyData } from "@/lib/queries";
 import { cashflowForecastTool } from "./tools";
 
@@ -14,6 +15,24 @@ export interface CashflowDay {
   cashOut: number;
   balance: number;
   gap: number;
+}
+
+// The authoritative forecast math is deterministic: invoice timing,
+// scheduled outflows, baseline opex, and running balance are all computed
+// before any AI call. This is what the app can always persist and show.
+export async function computeCashflowBase(
+  companyId: string,
+  openingCash = 50_000,
+  horizonDays = 90
+): Promise<CashflowDay[]> {
+  const projection = await computeProjection(companyId, openingCash, { horizonDays });
+  return projection.days.map((day) => ({
+    date: day.date,
+    cashIn: day.cashIn,
+    cashOut: day.cashOut,
+    balance: day.balance,
+    gap: day.gap,
+  }));
 }
 
 // Computes a 90-day cash-in vs cash-out timeline grounded in the company's

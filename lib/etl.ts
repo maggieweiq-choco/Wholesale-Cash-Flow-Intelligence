@@ -36,6 +36,24 @@ async function insertInChunks<T>(
   }
 }
 
+// Raw DynamoDB rows are never deleted, so re-clicking "Load Sample Data" (or
+// re-uploading the same file) keeps adding rows that normalizeCompany would
+// otherwise re-derive into duplicate Aurora records every time. Collapse
+// rows that share the same content key down to the most recently uploaded
+// one before inserting.
+function dedupeRawRows(
+  rows: RawUploadRow[],
+  keyFn: (data: Record<string, string>) => string
+): Record<string, string>[] {
+  const latest = new Map<string, RawUploadRow>();
+  for (const r of rows) {
+    const key = keyFn(r.data);
+    const prev = latest.get(key);
+    if (!prev || r.uploadedAt > prev.uploadedAt) latest.set(key, r);
+  }
+  return [...latest.values()].map((r) => r.data);
+}
+
 // Read every raw row for a company from DynamoDB (handles pagination).
 async function readRawRows(companyId: string): Promise<RawUploadRow[]> {
   const items: RawUploadRow[] = [];
@@ -60,21 +78,31 @@ async function readRawRows(companyId: string): Promise<RawUploadRow[]> {
 export async function normalizeCompany(companyId: string) {
   const raw = await readRawRows(companyId);
 
+  // Sales is a genuine transaction log — every row is a separate sale, so it
+  // is never deduped.
   const salesRows = raw.filter((r) => r.type === "sales").map((r) => r.data);
-  const invoiceRows = raw.filter((r) => r.type === "invoice").map((r) => r.data);
-  const payableRows = raw.filter((r) => r.type === "payable").map((r) => r.data);
 
-  // Inventory is a current-state snapshot, not a transaction log — unlike
-  // sales/invoices/payables, re-uploading inventory.csv should replace a
-  // SKU's row, not add another one. Raw DynamoDB rows are never deleted, so
-  // keep only the most recently uploaded row per SKU.
-  const latestInventoryBySku = new Map<string, RawUploadRow>();
-  for (const r of raw) {
-    if (r.type !== "inventory") continue;
-    const prev = latestInventoryBySku.get(r.data.sku);
-    if (!prev || r.uploadedAt > prev.uploadedAt) latestInventoryBySku.set(r.data.sku, r);
-  }
-  const inventoryRows = [...latestInventoryBySku.values()].map((r) => r.data);
+  // Inventory is a current-state snapshot: dedupe to one row per SKU (the
+  // most recently uploaded).
+  const inventoryRows = dedupeRawRows(
+    raw.filter((r) => r.type === "inventory"),
+    (d) => d.sku
+  );
+
+  // Invoices/payables don't carry a natural ID in the CSV, and re-clicking
+  // "Load Sample Data" (or re-uploading the same file) would otherwise
+  // re-derive the exact same invoice/bill as a brand-new duplicate every
+  // time. Two records are treated as the same document if they share
+  // customer/vendor + amount + issued/due dates — a real distinct invoice
+  // with all four identical is vanishingly unlikely.
+  const invoiceRows = dedupeRawRows(
+    raw.filter((r) => r.type === "invoice"),
+    (d) => `${d.customer_id}|${d.amount}|${d.issued_at}|${d.due_at}`
+  );
+  const payableRows = dedupeRawRows(
+    raw.filter((r) => r.type === "payable"),
+    (d) => `${d.vendor_id}|${d.amount}|${d.issued_at}|${d.due_at}`
+  );
 
   // Clear prior normalized data for this company.
   await Promise.all([

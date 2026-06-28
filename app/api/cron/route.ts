@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/aurora";
 import { invoices, cashFlowForecast } from "@/db/schema";
-import { runCashflowAgent } from "@/agents/cashflow-agent";
+import { computeCashflowBase } from "@/agents/cashflow-agent";
 
 // Triggered daily by Vercel Cron (see vercel.json) to refresh every
 // company's 90-day forecast so the dashboard stays current.
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const results: Record<string, number> = {};
   for (const companyId of companyIds) {
     try {
-      const forecast = await runCashflowAgent(companyId);
+      const forecast = await computeCashflowBase(companyId);
       await db.delete(cashFlowForecast).where(eq(cashFlowForecast.companyId, companyId));
       await db.insert(cashFlowForecast).values(
         forecast.map((day) => ({

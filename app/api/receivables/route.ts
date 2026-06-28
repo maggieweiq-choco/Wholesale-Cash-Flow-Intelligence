@@ -1,30 +1,19 @@
 import { NextResponse } from "next/server";
-import { computeCollectionsBase, runReceivablesAgent } from "@/agents/receivables-agent";
+import { computeCollectionsBase } from "@/agents/receivables-agent";
 import { getCompanyData } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
-import { describeAgentError } from "@/lib/claude";
 
-// Returns overdue invoices ranked by collections priority. The base
-// ranking (aging x amount x customer reliability) is always the
-// deterministic calc; Claude's refined priorityScore is layered on top
-// when available, but its absence never hides the underlying invoices.
+// Returns overdue invoices ranked by collections priority using a fixed,
+// auditable aging x amount x customer reliability formula. AI is not part of
+// the default data-load path.
 export async function GET() {
   const companyId = await requireCompanyId();
   if (!companyId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const [agentResult, companyData] = await Promise.all([
-    runReceivablesAgent(companyId).catch((err) => ({
-      error: err instanceof Error && err.message.includes("Upload + normalize first") ? err.message : describeAgentError(),
-    })),
-    getCompanyData(companyId),
-  ]);
+  const companyData = await getCompanyData(companyId);
+  const items = computeCollectionsBase(companyData.invoices, companyData.customers);
 
-  const items = Array.isArray(agentResult)
-    ? agentResult
-    : computeCollectionsBase(companyData.invoices, companyData.customers);
-  const agentError = Array.isArray(agentResult) ? null : agentResult.error;
-
-  return NextResponse.json({ items, agentError });
+  return NextResponse.json({ items, agentError: null });
 }

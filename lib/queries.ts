@@ -20,6 +20,25 @@ function isMissingWipColumnError(error: unknown): boolean {
   return error instanceof Error && /qty_wip|column .* does not exist/i.test(error.message);
 }
 
+// Aurora Data API caps a single response at 1MB. A company with thousands
+// of sales/inventory rows can blow past that in one SELECT, so page through
+// with LIMIT/OFFSET instead of fetching everything at once.
+const SELECT_PAGE_SIZE = 500;
+
+async function selectAllPaginated<T>(
+  fetchPage: (limit: number, offset: number) => Promise<T[]>
+): Promise<T[]> {
+  const results: T[] = [];
+  let offset = 0;
+  while (true) {
+    const page = await fetchPage(SELECT_PAGE_SIZE, offset);
+    results.push(...page);
+    if (page.length < SELECT_PAGE_SIZE) break;
+    offset += SELECT_PAGE_SIZE;
+  }
+  return results;
+}
+
 async function readRawInventoryRows(companyId: string): Promise<Record<string, string>[]> {
   const rows: RawUploadRow[] = [];
   let ExclusiveStartKey: Record<string, unknown> | undefined;
@@ -77,7 +96,9 @@ async function loadInventoryRows(companyId: string) {
   const seedWipBySku = await loadSeedWipBySku().catch(() => new Map<string, number>());
 
   try {
-    const rows = await db.select().from(inventory).where(eq(inventory.companyId, companyId));
+    const rows = await selectAllPaginated((limit, offset) =>
+      db.select().from(inventory).where(eq(inventory.companyId, companyId)).limit(limit).offset(offset)
+    );
     return rows.map((row) => {
       const rawWip = rawWipBySku.get(row.sku);
       const seedWip = seedWipBySku.get(row.sku);
@@ -89,19 +110,23 @@ async function loadInventoryRows(companyId: string) {
   } catch (error) {
     if (!isMissingWipColumnError(error)) throw error;
 
-    const legacyRows = await db
-      .select({
-        id: inventory.id,
-        companyId: inventory.companyId,
-        sku: inventory.sku,
-        qtyOnHand: inventory.qtyOnHand,
-        unitCost: inventory.unitCost,
-        vendorName: inventory.vendorName,
-        vendorCountry: inventory.vendorCountry,
-        updatedAt: inventory.updatedAt,
-      })
-      .from(inventory)
-      .where(eq(inventory.companyId, companyId));
+    const legacyRows = await selectAllPaginated((limit, offset) =>
+      db
+        .select({
+          id: inventory.id,
+          companyId: inventory.companyId,
+          sku: inventory.sku,
+          qtyOnHand: inventory.qtyOnHand,
+          unitCost: inventory.unitCost,
+          vendorName: inventory.vendorName,
+          vendorCountry: inventory.vendorCountry,
+          updatedAt: inventory.updatedAt,
+        })
+        .from(inventory)
+        .where(eq(inventory.companyId, companyId))
+        .limit(limit)
+        .offset(offset)
+    );
 
     return legacyRows.map((row) => ({ ...row, qtyWip: rawWipBySku.get(row.sku) ?? seedWipBySku.get(row.sku) ?? 0 }));
   }
@@ -112,12 +137,22 @@ async function loadInventoryRows(companyId: string) {
 // data, so it invented numbers. Now we pass the real rows.
 export async function getCompanyData(companyId: string) {
   const [sales, inv, invs, custs, pays, vens] = await Promise.all([
-    db.select().from(skuSalesHistory).where(eq(skuSalesHistory.companyId, companyId)),
+    selectAllPaginated((limit, offset) =>
+      db.select().from(skuSalesHistory).where(eq(skuSalesHistory.companyId, companyId)).limit(limit).offset(offset)
+    ),
     loadInventoryRows(companyId),
-    db.select().from(invoices).where(eq(invoices.companyId, companyId)),
-    db.select().from(customers).where(eq(customers.companyId, companyId)),
-    db.select().from(payables).where(eq(payables.companyId, companyId)),
-    db.select().from(vendors).where(eq(vendors.companyId, companyId)),
+    selectAllPaginated((limit, offset) =>
+      db.select().from(invoices).where(eq(invoices.companyId, companyId)).limit(limit).offset(offset)
+    ),
+    selectAllPaginated((limit, offset) =>
+      db.select().from(customers).where(eq(customers.companyId, companyId)).limit(limit).offset(offset)
+    ),
+    selectAllPaginated((limit, offset) =>
+      db.select().from(payables).where(eq(payables.companyId, companyId)).limit(limit).offset(offset)
+    ),
+    selectAllPaginated((limit, offset) =>
+      db.select().from(vendors).where(eq(vendors.companyId, companyId)).limit(limit).offset(offset)
+    ),
   ]);
   return { sales, inventory: inv, invoices: invs, customers: custs, payables: pays, vendors: vens };
 }

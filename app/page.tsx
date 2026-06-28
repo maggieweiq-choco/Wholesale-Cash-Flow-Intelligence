@@ -9,6 +9,7 @@ import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/
 import { InventoryTierSummary } from "@/components/InventoryTierSummary";
 import { DiscountDistributionChart } from "@/components/DiscountDistributionChart";
 import { TierFilterButtons } from "@/components/TierFilterButtons";
+import { UrgencyFilterButtons } from "@/components/UrgencyFilterButtons";
 import { InventorySupplyChart } from "@/components/InventorySupplyChart";
 import { InventoryVendorRiskNotes } from "@/components/InventoryVendorRiskNotes";
 import type { SkuTier } from "@/lib/sku-tiers";
@@ -81,10 +82,12 @@ function SectionShell({
 function KpiCard({
   label,
   value,
+  subtext,
   tone = "neutral",
 }: {
   label: string;
   value: string;
+  subtext?: string;
   tone?: "positive" | "negative" | "neutral";
 }) {
   const toneClass =
@@ -98,6 +101,7 @@ function KpiCard({
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
       <p className={`mt-2 text-2xl font-semibold ${toneClass}`}>{value}</p>
+      {subtext && <p className="mt-1 text-xs text-slate-400">{subtext}</p>}
     </div>
   );
 }
@@ -139,12 +143,13 @@ function CashFlowSection() {
   const [projLoading, setProjLoading] = useState(false);
   const [projError, setProjError] = useState<string | null>(null);
 
-  // AI forecast (single 90-day run, sliced client-side by horizon toggle).
+  // Saved forecast (single 90-day deterministic run, sliced client-side by horizon toggle).
   const [forecast, setForecast] = useState<CashflowDay[]>([]);
   const [horizon, setHorizon] = useState<Horizon>(90);
   const [fcLoading, setFcLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [fcError, setFcError] = useState<string | null>(null);
+  const [fcNotice, setFcNotice] = useState<string | null>(null);
 
   async function loadProjection() {
     setProjLoading(true);
@@ -166,6 +171,7 @@ function CashFlowSection() {
   async function loadForecast() {
     setFcLoading(true);
     setFcError(null);
+    setFcNotice(null);
     try {
       const res = await fetch("/api/forecast");
       const text = await res.text();
@@ -192,6 +198,7 @@ function CashFlowSection() {
   async function runForecast() {
     setRunning(true);
     setFcError(null);
+    setFcNotice(null);
     try {
       const res = await fetch("/api/forecast", {
         method: "POST",
@@ -202,6 +209,7 @@ function CashFlowSection() {
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Forecast failed");
       setForecast(data.forecast ?? []);
+      setFcNotice(data.agentError ?? null);
     } catch (err) {
       setFcError(err instanceof Error ? err.message : "Forecast failed");
     } finally {
@@ -217,7 +225,14 @@ function CashFlowSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const projChartData = (projection?.days ?? []).map((d) => ({ date: d.date, balance: d.balance }));
+  const [cashflowTab, setCashflowTab] = useState<"projection" | "forecast">("projection");
+
+  const projChartData = (projection?.days ?? []).map((d) => ({
+    date: d.date,
+    balance: d.balance,
+    cashIn: d.cashIn,
+    cashOut: d.cashOut,
+  }));
   const projLowest =
     projection && projection.lowestBalanceDate
       ? { date: projection.lowestBalanceDate, balance: projection.lowestBalance }
@@ -233,7 +248,7 @@ function CashFlowSection() {
     <SectionShell
       id="cashflow"
       title="Cash Flow"
-      description="Deterministic projection from real data, an AI forecast, and the risk alerts they surface."
+      description="Rule-based cash analysis from real data, with AI used only as an optional enhancement layer."
       action={
         <form
           onSubmit={(e) => {
@@ -261,13 +276,31 @@ function CashFlowSection() {
         </form>
       }
     >
-      {/* ---- Deterministic projection ---- */}
+      {/* ---- Projection / AI Forecast tabs ---- */}
+      <div className="flex rounded-md border border-slate-300 p-0.5 self-start">
+        <button
+          type="button"
+          onClick={() => setCashflowTab("projection")}
+          className={`rounded px-3 py-1.5 text-xs font-medium ${
+            cashflowTab === "projection" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Projection · Deterministic
+        </button>
+        <button
+          type="button"
+          onClick={() => setCashflowTab("forecast")}
+          className={`rounded px-3 py-1.5 text-xs font-medium ${
+            cashflowTab === "forecast" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          Forecast
+        </button>
+      </div>
+
+      {cashflowTab === "projection" && (
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-slate-900">Projection</h3>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-            Deterministic
-          </span>
           {projLoading && <span className="text-xs text-slate-400">Loading…</span>}
         </div>
 
@@ -299,14 +332,14 @@ function CashFlowSection() {
           )}
         </div>
       </div>
+      )}
 
-      {/* ---- AI forecast ---- */}
+      {cashflowTab === "forecast" && (
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-slate-900">AI Forecast</h3>
             <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-              AI
+              Saved
             </span>
             {fcLoading && <span className="text-xs text-slate-400">Loading…</span>}
           </div>
@@ -331,13 +364,16 @@ function CashFlowSection() {
               disabled={running}
               className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
             >
-              {running ? "Running…" : "Run AI Forecast"}
+              {running ? "Running…" : "Run Forecast"}
             </button>
           </div>
         </div>
 
         {fcError && (
           <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{fcError}</div>
+        )}
+        {fcNotice && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{fcNotice}</div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -353,17 +389,18 @@ function CashFlowSection() {
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           {slicedForecast.length > 0 ? (
             <CashflowChart
-              data={slicedForecast.map((d) => ({ date: d.date, balance: d.balance }))}
+              data={slicedForecast.map((d) => ({ date: d.date, balance: d.balance, cashIn: d.cashIn, cashOut: d.cashOut }))}
               breakDate={fcBreakDay?.date}
               lowest={fcLowest !== null && fcBreakDay ? { date: fcBreakDay.date, balance: fcBreakDay.balance } : null}
             />
           ) : (
             <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
-              No forecast yet — click &ldquo;Run AI Forecast&rdquo; to generate one.
+              No forecast yet — click &ldquo;Run Forecast&rdquo; to generate one.
             </div>
           )}
         </div>
       </div>
+      )}
 
       {/* ---- Risk alerts ---- */}
       <div className="flex flex-col gap-4">
@@ -471,16 +508,13 @@ function InventorySection({
           value={metrics ? `$${metrics.totalInventoryValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
         />
         <KpiCard
-          label="WIP Units"
-          value={metrics ? metrics.totalWipUnits.toLocaleString() : "—"}
-        />
-        <KpiCard
-          label="WIP Value"
+          label="Work in Progress"
           value={metrics ? `$${metrics.totalWipValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
-        />
-        <KpiCard
-          label="WIP Share of Supply"
-          value={metrics ? `${Math.round(metrics.wipShareOfSupplyValue * 100)}%` : "—"}
+          subtext={
+            metrics
+              ? `${metrics.totalWipUnits.toLocaleString()} units · ${Math.round(metrics.wipShareOfSupplyValue * 100)}% of supply`
+              : undefined
+          }
         />
         <KpiCard
           label="Avg Daily COGS"
@@ -588,6 +622,7 @@ function PurchasingSection({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [urgencyFilter, setUrgencyFilter] = useState<Set<PurchasingItem["urgency"]>>(new Set());
 
   async function load() {
     setLoading(true);
@@ -613,12 +648,16 @@ function PurchasingSection({
   }, []);
 
   const filtered = items.filter(
-    (item) => item.sku.toLowerCase().includes(search.toLowerCase()) && (tierFilter.size === 0 || tierFilter.has(item.tier))
+    (item) =>
+      item.sku.toLowerCase().includes(search.toLowerCase()) &&
+      (tierFilter.size === 0 || tierFilter.has(item.tier)) &&
+      (urgencyFilter.size === 0 || urgencyFilter.has(item.urgency))
   );
   const preview = filtered.slice(0, PREVIEW_ROWS);
   const detailsHref = `/purchasing/details?${new URLSearchParams({
     ...(search ? { search } : {}),
     ...(tierFilter.size ? { tiers: [...tierFilter].join(",") } : {}),
+    ...(urgencyFilter.size ? { urgency: [...urgencyFilter].join(",") } : {}),
   }).toString()}`;
 
   return (
@@ -651,12 +690,14 @@ function PurchasingSection({
             className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           />
           <TierFilterButtons selected={tierFilter} onChange={setTierFilter} />
-          {(search || tierFilter.size > 0) && (
+          <UrgencyFilterButtons selected={urgencyFilter} onChange={setUrgencyFilter} />
+          {(search || tierFilter.size > 0 || urgencyFilter.size > 0) && (
             <button
               type="button"
               onClick={() => {
                 setSearch("");
                 setTierFilter(new Set());
+                setUrgencyFilter(new Set());
               }}
               className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-900"
             >
@@ -755,17 +796,19 @@ function PayablesSection() {
   const [items, setItems] = useState<PayablesItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     setError(null);
+    setAiNotice(null);
     try {
       const res = await fetch("/api/payables");
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Failed to load payables");
       setItems(data.items ?? []);
-      setError(data.agentError ?? null);
+      setAiNotice(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load payables");
       setItems([]);
@@ -798,6 +841,9 @@ function PayablesSection() {
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
+      {aiNotice && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
+      )}
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PayablesTable items={items} />}
@@ -810,11 +856,13 @@ function FinancingSection() {
   const [recommendation, setRecommendation] = useState<FinancingRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setAiNotice(null);
     try {
       const formData = new FormData(event.currentTarget);
       const gapAmount = formData.get("gapAmount");
@@ -829,6 +877,7 @@ function FinancingSection() {
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error ?? "Request failed");
       setRecommendation(data);
+      setAiNotice(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
@@ -840,7 +889,7 @@ function FinancingSection() {
     <SectionShell
       id="financing"
       title="Financing Recommendation"
-      description="Compare bank loan, inventory liquidation, and AR financing to close a projected cash gap."
+      description="Rule-based comparison of bank loan, inventory liquidation, and AR financing to close a projected cash gap."
     >
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
@@ -865,6 +914,9 @@ function FinancingSection() {
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {aiNotice && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
       {recommendation && (

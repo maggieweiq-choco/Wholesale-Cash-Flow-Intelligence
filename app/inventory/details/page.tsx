@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DeadStockTable } from "@/components/DeadStockTable";
@@ -18,6 +18,14 @@ const TAB_OPTIONS = ["all", "wip", "exceptions"] as const;
 type InventoryTab = (typeof TAB_OPTIONS)[number];
 
 export default function InventoryDetailsPage() {
+  return (
+    <Suspense fallback={<DetailsFallback title="Dead Stock — Full List" />}>
+      <InventoryDetailsContent />
+    </Suspense>
+  );
+}
+
+function InventoryDetailsContent() {
   const searchParams = useSearchParams();
   const [items, setItems] = useState<DeadStockItemWithValue[]>([]);
   const [metrics, setMetrics] = useState<{
@@ -95,7 +103,6 @@ export default function InventoryDetailsPage() {
       filtered.map((item) => ({
         sku: item.sku,
         tier: item.tier,
-        productType: item.productType,
         onHandQty: item.totalSupplyQty - item.wipQty,
         wipQty: item.wipQty,
         daysOfSupply: item.daysOfSupply,
@@ -242,5 +249,21 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
       <p className="mt-2 text-xl font-semibold text-slate-900">{value}</p>
     </div>
+  );
+}
+
+function DetailsFallback({ title }: { title: string }) {
+  return (
+    <main className="flex flex-1 flex-col gap-6 max-w-5xl mx-auto w-full px-6 py-10">
+      <div>
+        <Link href="/#inventory" className="text-xs font-medium text-slate-500 hover:text-slate-900">
+          ← Back to Dashboard
+        </Link>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
+      </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-400">Loading…</p>
+      </div>
+    </main>
   );
 }

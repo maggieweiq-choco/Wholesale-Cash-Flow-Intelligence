@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
-import { runCashflowAgent } from "@/agents/cashflow-agent";
+import { computeCashflowBase } from "@/agents/cashflow-agent";
 import { db } from "@/lib/aurora";
 import { cashFlowForecast } from "@/db/schema";
 import { requireCompanyId } from "@/lib/dal";
-import { describeAgentError } from "@/lib/claude";
 
-// Runs the cash flow agent (grounded in Aurora data) and persists the fresh
-// 90-day forecast, replacing any previous one for this company. Unlike the
-// deterministic projection (/api/projection), the AI forecast has no
-// fallback — if Claude is down there's nothing to show, but the error
-// message stays clean rather than leaking the raw API response.
+// Persists the fresh 90-day forecast, replacing any previous one for this
+// company. The forecast math is deterministic and runs before any AI layer,
+// so missing credits/API errors never block the core cash-flow analysis.
 export async function POST(request: NextRequest) {
   const companyId = await requireCompanyId();
   if (!companyId) {
@@ -21,10 +18,10 @@ export async function POST(request: NextRequest) {
 
   let forecast;
   try {
-    forecast = await runCashflowAgent(companyId, openingCash ?? 50_000);
+    forecast = await computeCashflowBase(companyId, openingCash ?? 50_000);
   } catch (err) {
-    const message = err instanceof Error && err.message.includes("Upload + normalize first") ? err.message : describeAgentError();
-    return NextResponse.json({ error: message }, { status: 502 });
+    const message = err instanceof Error ? err.message : "Forecast failed";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   await db.delete(cashFlowForecast).where(eq(cashFlowForecast.companyId, companyId));
@@ -40,7 +37,7 @@ export async function POST(request: NextRequest) {
   );
 
   const worstGap = Math.min(0, ...forecast.map((d) => d.gap));
-  return NextResponse.json({ forecast, worstGap });
+  return NextResponse.json({ forecast, worstGap, agentError: null });
 }
 
 // Lets the dashboard read the stored forecast without re-running Claude.

@@ -13,7 +13,14 @@ export function PayablesTable({ items }: { items: PayablesItem[] }) {
           <th className="py-2 pr-4">Vendor</th>
           <th className="py-2 pr-4">Amount</th>
           <th className="py-2 pr-4">Due In</th>
-          <th className="py-2">Priority</th>
+          <th className="py-2">
+            <span
+              className="cursor-help border-b border-dotted border-slate-400"
+              title="Priority is a sorting score, not a dollar amount. It combines bill amount and due-date urgency; higher scores should be paid first."
+            >
+              Priority
+            </span>
+          </th>
         </tr>
       </thead>
       <tbody>
