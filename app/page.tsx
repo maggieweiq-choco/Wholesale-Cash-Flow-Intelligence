@@ -152,10 +152,16 @@ interface ProjectionDay {
   gap: number;
 }
 
+interface ProfitDay {
+  date: string;
+  accrualBalance: number;
+}
+
 interface ProjectionData {
   openingCash: number;
   horizonDays: number;
   days: ProjectionDay[];
+  profitDays: ProfitDay[];
   lowestBalance: number;
   lowestBalanceDate: string | null;
   firstBreakDate: string | null;
@@ -361,7 +367,12 @@ function CashFlowSection() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           {projChartData.length > 0 ? (
-            <CashflowChart data={projChartData} breakDate={projection?.firstBreakDate} lowest={projLowest} />
+            <CashflowChart
+              data={projChartData}
+              profitLine={projection?.profitDays}
+              breakDate={projection?.firstBreakDate}
+              lowest={projLowest}
+            />
           ) : (
             <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
               {projLoading ? "Loading…" : "No projection data."}

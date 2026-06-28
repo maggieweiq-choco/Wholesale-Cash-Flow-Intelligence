@@ -10,6 +10,11 @@ export interface ProjectionDay {
   gap: number; // balance when negative, else 0
 }
 
+export interface ProfitDay {
+  date: string;
+  accrualBalance: number; // openingCash + cumulative(daily gross profit - amortized daily opex)
+}
+
 export type AlertSeverity = "critical" | "warning" | "info";
 
 export interface RiskAlert {
@@ -24,6 +29,7 @@ export interface Projection {
   openingCash: number;
   horizonDays: number;
   days: ProjectionDay[];
+  profitDays: ProfitDay[]; // accrual-basis P&L line, same horizon, same opening point
   lowestBalance: number;
   lowestBalanceDate: string | null;
   firstBreakDate: string | null;
@@ -62,7 +68,7 @@ export async function computeProjection(
   openingCash = 50_000,
   opts: ProjectionOptions = {}
 ): Promise<Projection> {
-  const { invoices, customers } = await getCompanyData(companyId);
+  const { invoices, customers, sales, inventory: inv } = await getCompanyData(companyId);
   const today = new Date().toISOString().slice(0, 10);
   const custById = new Map(customers.map((c) => [c.id, c]));
 
@@ -151,6 +157,28 @@ export async function computeProjection(
   const worstGap = Math.min(0, lowestBalance);
   const overdueTotal = [...overdueByCustomer.values()].reduce((a, b) => a + b, 0);
 
+  // Profit line: accrual P&L starting from the same openingCash.
+  // Gross profit per day = Σ_sku (revenue − unitCost × soldQty) for that soldAt date.
+  // Opex is amortized daily (payroll spread evenly; supplier PO is a balance-sheet item, excluded).
+  const unitCostBySku = new Map(inv.map((r) => [r.sku, Number(r.unitCost ?? 0)]));
+  const dailyGrossProfit = new Map<string, number>();
+  for (const row of sales) {
+    const gp = Number(row.revenue ?? 0) - (unitCostBySku.get(row.sku) ?? 0) * row.soldQty;
+    dailyGrossProfit.set(row.soldAt, (dailyGrossProfit.get(row.soldAt) ?? 0) + gp);
+  }
+  const payrollTotal = outflowEvents
+    .filter((e) => e.label === "Payroll")
+    .reduce((s, e) => s + e.amount, 0);
+  const amortizedDailyOpex = BASELINE_DAILY_OPEX + payrollTotal / (horizonDays + 1);
+
+  const profitDays: ProfitDay[] = [];
+  let accrualBal = openingCash;
+  for (let i = 0; i <= horizonDays; i++) {
+    const date = addDays(today, i);
+    accrualBal = round2(accrualBal + (dailyGrossProfit.get(date) ?? 0) - amortizedDailyOpex);
+    profitDays.push({ date, accrualBalance: accrualBal });
+  }
+
   const alerts: RiskAlert[] = [];
 
   if (firstBreakDate) {
@@ -216,6 +244,7 @@ export async function computeProjection(
     openingCash,
     horizonDays,
     days,
+    profitDays,
     lowestBalance,
     lowestBalanceDate,
     firstBreakDate,

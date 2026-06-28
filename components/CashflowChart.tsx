@@ -4,6 +4,7 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  Legend,
   Line,
   ReferenceDot,
   ReferenceLine,
@@ -20,22 +21,24 @@ interface ChartPoint {
   cashOut?: number;
 }
 
-// Works for both the projection and the forecast — any series of
-// {date, balance, cashIn?, cashOut?}. breakDate draws the red breakpoint
-// marker; lowest pins the trough. When cashIn/cashOut are present, they
-// render as in/out bars (out shown below zero) so it's clear what's
-// driving each day's balance, not just where the line ends up.
 export function CashflowChart({
   data,
+  profitLine,
   breakDate,
   lowest,
 }: {
   data: ChartPoint[];
+  profitLine?: { date: string; accrualBalance: number }[];
   breakDate?: string | null;
   lowest?: { date: string; balance: number } | null;
 }) {
   const hasFlows = data.some((d) => d.cashIn !== undefined || d.cashOut !== undefined);
-  const chartData = data.map((d) => ({ ...d, cashOutNeg: d.cashOut ? -d.cashOut : undefined }));
+  const profitByDate = new Map(profitLine?.map((p) => [p.date, p.accrualBalance]) ?? []);
+  const chartData = data.map((d) => ({
+    ...d,
+    cashOutNeg: d.cashOut ? -d.cashOut : undefined,
+    accrualBalance: profitByDate.get(d.date),
+  }));
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -55,6 +58,7 @@ export function CashflowChart({
           tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
         />
         <ReferenceLine y={0} stroke="#cbd5e1" />
+        {profitLine && <Legend verticalAlign="top" height={28} iconType="plainline" wrapperStyle={{ fontSize: 12 }} />}
         {breakDate && (
           <ReferenceLine
             x={breakDate}
@@ -66,14 +70,19 @@ export function CashflowChart({
         {lowest && <ReferenceDot x={lowest.date} y={lowest.balance} r={4} fill="#dc2626" stroke="none" />}
         <Tooltip
           formatter={(value: number, name: string) => {
-            const label = name === "cashOutNeg" ? "Cash Out" : name === "cashIn" ? "Cash In" : "Balance";
-            return [`$${Math.abs(value).toLocaleString()}`, label];
+            if (name === "cashOutNeg") return [`$${Math.abs(value).toLocaleString()}`, "Cash Out"];
+            if (name === "cashIn") return [`$${Math.abs(value).toLocaleString()}`, "Cash In"];
+            if (name === "accrualBalance") return [`$${Math.abs(value).toLocaleString()}`, "Accrual Profit"];
+            return [`$${Math.abs(value).toLocaleString()}`, "Cash Balance"];
           }}
           contentStyle={{ borderRadius: 8, borderColor: "#e2e8f0", fontSize: 12 }}
         />
-        {hasFlows && <Bar dataKey="cashIn" fill="#10b981" fillOpacity={0.6} barSize={6} />}
-        {hasFlows && <Bar dataKey="cashOutNeg" fill="#ef4444" fillOpacity={0.6} barSize={6} />}
-        <Line type="monotone" dataKey="balance" stroke="#0f172a" strokeWidth={2} dot={false} />
+        {hasFlows && <Bar dataKey="cashIn" fill="#10b981" fillOpacity={0.6} barSize={6} legendType="none" />}
+        {hasFlows && <Bar dataKey="cashOutNeg" fill="#ef4444" fillOpacity={0.6} barSize={6} legendType="none" />}
+        <Line type="monotone" dataKey="balance" name="Cash Balance" stroke="#0f172a" strokeWidth={2} dot={false} />
+        {profitLine && (
+          <Line type="monotone" dataKey="accrualBalance" name="Accrual Profit" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="5 3" />
+        )}
       </ComposedChart>
     </ResponsiveContainer>
   );
