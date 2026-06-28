@@ -13,6 +13,17 @@ export async function GET(request: NextRequest) {
   const parsed = raw != null ? Number(raw) : 50_000;
   const openingCash = Number.isFinite(parsed) ? parsed : 50_000;
 
-  const projection = await computeProjection(companyId, openingCash);
+  const rawExtra = request.nextUrl.searchParams.get("extraInflows");
+  let extraInflows: { dayOffset: number; amount: number }[] = [];
+  if (rawExtra) {
+    try {
+      const maybe = JSON.parse(rawExtra);
+      if (Array.isArray(maybe)) extraInflows = maybe;
+    } catch {
+      // ignore malformed
+    }
+  }
+
+  const projection = await computeProjection(companyId, openingCash, { extraInflows });
   return NextResponse.json(projection);
 }

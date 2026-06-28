@@ -14,7 +14,8 @@ async function loadSeedWipBySku() {
   for (const row of rows) {
     const sku = row.sku?.trim();
     if (!sku) continue;
-    const qtyWip = Number(row.qty_wip ?? 0);
+    if (row.qty_wip === undefined || row.qty_wip === null || row.qty_wip === "") continue;
+    const qtyWip = Number(row.qty_wip);
     if (!Number.isFinite(qtyWip)) continue;
     seedWipBySku.set(sku, qtyWip);
   }

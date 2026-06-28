@@ -28,10 +28,12 @@ export default function DashboardPage() {
   // Shared across Inventory and Purchasing so picking a tier in one filters
   // the other too — both sections are ranking the same SKUs by the same rule.
   const [tierFilter, setTierFilter] = useState<Set<SkuTier>>(new Set());
+  // Lifted here so FinancingSection can pre-populate its gap input from the projection.
+  const [worstGap, setWorstGap] = useState(0);
 
   return (
     <main className="flex flex-1 flex-col">
-      <CashFlowSection />
+      <CashFlowSection onWorstGap={setWorstGap} />
       <SectionDivider />
       <InventorySection tierFilter={tierFilter} setTierFilter={setTierFilter} />
       <SectionDivider />
@@ -41,7 +43,7 @@ export default function DashboardPage() {
       <SectionDivider />
       <PayablesSection />
       <SectionDivider />
-      <FinancingSection />
+      <FinancingSection defaultGap={worstGap} />
     </main>
   );
 }
@@ -162,6 +164,8 @@ interface ProjectionData {
   horizonDays: number;
   days: ProjectionDay[];
   profitDays: ProfitDay[];
+  arTotal: number;
+  apTotal: number;
   lowestBalance: number;
   lowestBalanceDate: string | null;
   firstBreakDate: string | null;
@@ -175,8 +179,9 @@ function fmtMoney(n: number | null | undefined): string {
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
-function CashFlowSection() {
+function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) {
   const [openingCash, setOpeningCash] = useState(50_000);
+  const [simInflows, setSimInflows] = useState<{ dayOffset: number; amount: number }[]>([]);
 
   // Deterministic projection (real invoice/sales/inventory data, no LLM).
   const [projection, setProjection] = useState<ProjectionData | null>(null);
@@ -191,15 +196,18 @@ function CashFlowSection() {
   const [fcError, setFcError] = useState<string | null>(null);
   const [fcNotice, setFcNotice] = useState<string | null>(null);
 
-  async function loadProjection() {
+  async function loadProjection(extra = simInflows) {
     setProjLoading(true);
     setProjError(null);
     try {
-      const res = await fetch(`/api/projection?openingCash=${openingCash}`);
+      const params = new URLSearchParams({ openingCash: String(openingCash) });
+      if (extra.length > 0) params.set("extraInflows", JSON.stringify(extra));
+      const res = await fetch(`/api/projection?${params}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Failed to load projection");
       setProjection(data);
+      onWorstGap(data.worstGap ? Math.abs(data.worstGap) : 0);
     } catch (err) {
       setProjError(err instanceof Error ? err.message : "Failed to load projection");
       setProjection(null);
@@ -379,6 +387,56 @@ function CashFlowSection() {
             </div>
           )}
         </div>
+
+        {projection && (projection.arTotal > 0 || projection.apTotal > 0) && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <KpiCard label="AR Outstanding" value={fmtMoney(projection.arTotal)} />
+            <KpiCard label="AP Outstanding" value={fmtMoney(projection.apTotal)} />
+            <KpiCard
+              label="Net AR − AP"
+              value={fmtMoney(projection.arTotal - projection.apTotal)}
+              subtext="Working capital exposure (excl. inventory)"
+              tone={projection.arTotal >= projection.apTotal ? "positive" : "negative"}
+            />
+          </div>
+        )}
+
+        {projection && projection.overdueTotal > 0 && (
+          <div className={`rounded-xl border p-4 ${simInflows.length > 0 ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+            <p className={`text-sm ${simInflows.length > 0 ? "text-emerald-800" : "text-amber-800"}`}>
+              <strong>{fmtMoney(projection.overdueTotal)}</strong> in overdue AR is excluded from this projection — customers are past their average payment window.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {simInflows.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [{ dayOffset: 0, amount: projection.overdueTotal }];
+                    setSimInflows(next);
+                    void loadProjection(next);
+                  }}
+                  className="rounded-md bg-amber-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-900"
+                >
+                  What if collected today?
+                </button>
+              ) : (
+                <>
+                  <span className="text-xs font-medium text-emerald-700">Simulation active — overdue AR added as day-0 inflow.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSimInflows([]);
+                      void loadProjection([]);
+                    }}
+                    className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+                  >
+                    Reset
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       )}
 
@@ -912,11 +970,20 @@ function PayablesSection() {
   );
 }
 
-function FinancingSection() {
+function FinancingSection({ defaultGap }: { defaultGap: number }) {
   const [recommendation, setRecommendation] = useState<FinancingRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
+  const [gapInput, setGapInput] = useState("");
+
+  // Pre-populate from projection's worst gap once it loads; never overwrites user edits.
+  useEffect(() => {
+    if (defaultGap > 0 && !gapInput) {
+      setGapInput(String(Math.round(defaultGap)));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultGap]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -924,13 +991,11 @@ function FinancingSection() {
     setError(null);
     setAiNotice(null);
     try {
-      const formData = new FormData(event.currentTarget);
-      const gapAmount = formData.get("gapAmount");
       const response = await fetch("/api/financing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          gapAmount: gapAmount ? Number(gapAmount) : undefined,
+          gapAmount: gapInput ? Number(gapInput) : undefined,
         }),
       });
       const text = await response.text();
@@ -957,11 +1022,14 @@ function FinancingSection() {
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">Gap Amount</span>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Gap Amount{defaultGap > 0 && <span className="ml-1 font-normal normal-case text-slate-400">(from projection)</span>}
+            </span>
             <input
-              name="gapAmount"
               type="number"
-              placeholder="Leave blank to use latest forecast"
+              value={gapInput}
+              onChange={(e) => setGapInput(e.target.value)}
+              placeholder="Auto-filled from projection"
               className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
             />
           </label>

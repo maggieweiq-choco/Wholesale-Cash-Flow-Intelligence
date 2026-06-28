@@ -53,7 +53,7 @@ export function computeInventoryBase(inventoryRows: InventoryRow[], sales: Sales
     const sale = bySku.get(inv.sku);
     const spanDays = sale ? Math.max(1, Math.round((sale.maxDate - sale.minDate) / 86_400_000) + 1) : 0;
     const avgDailyVelocity = sale && spanDays > 0 ? sale.totalQty / spanDays : 0;
-    const daysOfSupply = avgDailyVelocity > 0 ? Math.round(inv.qtyOnHand / avgDailyVelocity) : 999;
+    const daysOfSupply = avgDailyVelocity > 0 ? Math.round((inv.qtyOnHand + (inv.qtyWip ?? 0)) / avgDailyVelocity) : 999;
 
     const tier = tiers.get(inv.sku) ?? "D";
     const suggestedDiscountPct = TIER_DISCOUNT_PCT[tier];

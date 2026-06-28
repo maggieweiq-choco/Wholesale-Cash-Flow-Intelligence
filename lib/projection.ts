@@ -1,5 +1,5 @@
 import { getCompanyData } from "@/lib/queries";
-import { BASELINE_DAILY_OPEX, scheduledOutflowEvents } from "@/lib/scheduled-outflows";
+import { BASELINE_DAILY_OPEX, RECURRING_OUTFLOWS, scheduledOutflowEvents } from "@/lib/scheduled-outflows";
 
 export interface ProjectionDay {
   date: string;
@@ -30,6 +30,8 @@ export interface Projection {
   horizonDays: number;
   days: ProjectionDay[];
   profitDays: ProfitDay[]; // accrual-basis P&L line, same horizon, same opening point
+  arTotal: number; // total outstanding AR across all unpaid invoices
+  apTotal: number; // total outstanding AP across all unpaid payables
   lowestBalance: number;
   lowestBalanceDate: string | null;
   firstBreakDate: string | null;
@@ -68,7 +70,7 @@ export async function computeProjection(
   openingCash = 50_000,
   opts: ProjectionOptions = {}
 ): Promise<Projection> {
-  const { invoices, customers, sales, inventory: inv } = await getCompanyData(companyId);
+  const { invoices, customers, sales, inventory: inv, payables: payablesData } = await getCompanyData(companyId);
   const today = new Date().toISOString().slice(0, 10);
   const custById = new Map(customers.map((c) => [c.id, c]));
 
@@ -102,9 +104,20 @@ export async function computeProjection(
     (max, f) => Math.max(max, dayOffset(today, f.date)),
     0
   );
-  const lastOutflowOffset = scheduledOutflowEvents(today, 3650).reduce(
-    (max, e) => Math.max(max, dayOffset(today, e.date)),
-    0
+
+  const unpaidPayables = payablesData.filter((p) => p.status !== "paid");
+
+  // Consider real payable due dates when sizing the horizon.
+  const lastPayableOffset = unpaidPayables.reduce((max, p) => {
+    const off = dayOffset(today, p.dueAt);
+    return off > 0 ? Math.max(max, off) : max;
+  }, 0);
+  const lastOutflowOffset = Math.max(
+    scheduledOutflowEvents(today, 3650).reduce(
+      (max, e) => Math.max(max, dayOffset(today, e.date)),
+      0
+    ),
+    lastPayableOffset
   );
   const horizonDays =
     opts.horizonDays ?? Math.max(MIN_HORIZON_DAYS, lastInflowOffset, lastOutflowOffset);
@@ -120,7 +133,23 @@ export async function computeProjection(
     }
   }
 
-  const outflowEvents = scheduledOutflowEvents(today, horizonDays);
+  // Use real payables as AP outflows when available; fall back to demo scheduled
+  // one-time events (supplier PO) otherwise. Always keep recurring events (payroll).
+  const allScheduledEvents = scheduledOutflowEvents(today, horizonDays);
+  const recurringLabels = new Set(RECURRING_OUTFLOWS.map((r) => r.label));
+  const outflowEvents =
+    unpaidPayables.length > 0
+      ? [
+          ...allScheduledEvents.filter((e) => recurringLabels.has(e.label)),
+          ...unpaidPayables
+            .filter((p) => {
+              const off = dayOffset(today, p.dueAt);
+              return off >= 0 && off <= horizonDays;
+            })
+            .map((p) => ({ date: p.dueAt, label: "Payable", amount: Number(p.amount) })),
+        ].sort((a, b) => a.date.localeCompare(b.date))
+      : allScheduledEvents;
+
   const outByDate = new Map<string, number>();
   for (const e of outflowEvents) {
     outByDate.set(e.date, (outByDate.get(e.date) ?? 0) + e.amount);
@@ -240,11 +269,16 @@ export async function computeProjection(
     }
   }
 
+  const arTotal = unpaid.reduce((sum, inv) => sum + Number(inv.amount), 0);
+  const apTotal = unpaidPayables.reduce((sum, p) => sum + Number(p.amount), 0);
+
   return {
     openingCash,
     horizonDays,
     days,
     profitDays,
+    arTotal,
+    apTotal,
     lowestBalance,
     lowestBalanceDate,
     firstBreakDate,

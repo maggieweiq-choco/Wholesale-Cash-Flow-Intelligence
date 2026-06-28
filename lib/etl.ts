@@ -84,6 +84,7 @@ const PAYABLE_STANDARD_COLUMNS = ["vendor_id", "vendor_name", "amount", "issued_
 async function ensureFlexibleColumns(): Promise<void> {
   const statements = [
     `ALTER TABLE "sku_sales_history" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL`,
+    `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "qty_wip" integer DEFAULT 0 NOT NULL`,
     `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "vendor_lead_time_days" integer DEFAULT 14 NOT NULL`,
     `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "return_rate_pct" numeric(5, 2) DEFAULT '0' NOT NULL`,
     `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "obsolete_risk" text DEFAULT 'low' NOT NULL`,

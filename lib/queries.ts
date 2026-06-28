@@ -70,7 +70,10 @@ async function loadRawWipBySku(companyId: string): Promise<Map<string, number>> 
   for (const row of rawInventoryRows) {
     const sku = row.sku?.trim();
     if (!sku) continue;
-    const qtyWip = Number(row.qty_wip ?? 0);
+    // Skip rows that don't have a qty_wip field at all — storing 0 would block
+    // the seedWip fallback in the ?? chain (0 ?? x === 0, not x).
+    if (row.qty_wip === undefined || row.qty_wip === null || row.qty_wip === "") continue;
+    const qtyWip = Number(row.qty_wip);
     if (!Number.isFinite(qtyWip)) continue;
     rawWipBySku.set(sku, qtyWip);
   }
