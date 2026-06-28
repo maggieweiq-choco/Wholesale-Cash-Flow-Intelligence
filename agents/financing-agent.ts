@@ -1,6 +1,7 @@
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { getCompanyData } from "@/lib/queries";
 import { financingRecommendationTool } from "./tools";
+import { TIER_DISCOUNT_PCT, tierSkusByCompositeScore, dedupeBySku, type SkuTier } from "@/lib/sku-tiers";
 
 export interface LoanScenario {
   optionType: "bank_loan" | "liquidate" | "ar_finance";
@@ -10,9 +11,18 @@ export interface LoanScenario {
   recommended: boolean;
 }
 
+export interface LiquidationTierBreakdown {
+  tier: SkuTier;
+  inventoryValue: number;
+  discountPct: number;
+  cashRaised: number;
+  cashUsed: number;
+}
+
 export interface FinancingRecommendation {
   gapAmount: number;
   options: LoanScenario[];
+  liquidationByTier?: LiquidationTierBreakdown[];
   agentError?: string | null;
 }
 
@@ -44,18 +54,14 @@ export async function computeFinancingBase(
   companyId: string,
   gapAmount: number
 ): Promise<FinancingRecommendation> {
-  const { inventory, invoices } = await getCompanyData(companyId);
+  const { inventory: rawInventory, invoices, sales } = await getCompanyData(companyId);
+  const inventory = dedupeBySku(rawInventory);
   const unpaid = invoices.filter((i) => i.status !== "paid");
 
-  const inventoryValue = inventory.reduce(
-    (sum, item) => sum + item.qtyOnHand * Number(item.unitCost ?? 0),
-    0
-  );
   const unpaidReceivables = unpaid.reduce((sum, invoice) => sum + Number(invoice.amount), 0);
 
   const bankDurationDays = 90;
   const bankApr = 0.1;
-  const liquidationDiscount = 0.25;
   const arAdvanceRate = 0.85;
   const arFeeRate = 0.03;
 
@@ -67,13 +73,51 @@ export async function computeFinancingBase(
     recommended: false,
   };
 
-  const liquidatableCash = inventoryValue * (1 - liquidationDiscount);
+  // Liquidation value is weighted by the same composite-score tier each SKU
+  // already gets for dead-stock discounting (lib/sku-tiers.ts) — A-tier
+  // stock isn't worth dumping at a discount, D-tier is. A flat haircut
+  // ignored that mix entirely.
+  const tiers = tierSkusByCompositeScore(inventory, sales);
+  const valueByTier = new Map<SkuTier, number>();
+  for (const item of inventory) {
+    const tier = tiers.get(item.sku) ?? "D";
+    const value = item.qtyOnHand * Number(item.unitCost ?? 0);
+    valueByTier.set(tier, (valueByTier.get(tier) ?? 0) + value);
+  }
+
+  // Consume tiers in order A -> D (cheapest discount first) until the gap is
+  // covered. A small gap should be filled from healthy A-stock at ~0% cost,
+  // not priced off the whole portfolio's blended discount.
+  let remaining = gapAmount;
+  let liquidateCost = 0;
+  const liquidationByTier: LiquidationTierBreakdown[] = (["A", "B", "C", "D"] as SkuTier[])
+    .map((tier) => {
+      const inventoryValue = valueByTier.get(tier) ?? 0;
+      const discountPct = TIER_DISCOUNT_PCT[tier];
+      const tierCashCapacity = inventoryValue * (1 - discountPct / 100);
+
+      const cashUsed = Math.max(0, Math.min(remaining, tierCashCapacity));
+      const fractionUsed = tierCashCapacity > 0 ? cashUsed / tierCashCapacity : 0;
+      liquidateCost += fractionUsed * inventoryValue * (discountPct / 100);
+      remaining -= cashUsed;
+
+      return {
+        tier,
+        inventoryValue: round2(inventoryValue),
+        discountPct,
+        cashRaised: round2(tierCashCapacity),
+        cashUsed: round2(cashUsed),
+      };
+    })
+    .filter((row) => row.inventoryValue > 0);
+
+  const liquidatableCash = liquidationByTier.reduce((sum, row) => sum + row.cashRaised, 0);
   const liquidateAmount = Math.min(gapAmount, liquidatableCash);
   const liquidate: LoanScenario = {
     optionType: "liquidate",
     amount: round2(liquidateAmount),
     durationDays: 30,
-    estimatedCost: round2(liquidateAmount > 0 ? liquidateAmount * (liquidationDiscount / (1 - liquidationDiscount)) : 0),
+    estimatedCost: round2(liquidateCost),
     recommended: false,
   };
 
@@ -90,6 +134,7 @@ export async function computeFinancingBase(
   return {
     gapAmount: round2(gapAmount),
     options: withRecommendedOption([bankLoan, liquidate, arFinance]),
+    liquidationByTier,
     agentError: null,
   };
 }

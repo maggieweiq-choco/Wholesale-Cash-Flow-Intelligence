@@ -85,14 +85,30 @@ function SectionShell({
               <span className={`h-1.5 w-1.5 rounded-full ${toneClass.dot}`} />
               <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{question}</span>
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
+            <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
+              {title}
+              {description && <InfoIcon text={description} />}
+            </h2>
             {description && <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>}
           </div>
           {action}
         </div>
-        {children}
+        <div className="flex flex-col gap-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          {children}
+        </div>
       </div>
     </section>
+  );
+}
+
+function InfoIcon({ text }: { text: string }) {
+  return (
+    <span
+      title={text}
+      className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-400 hover:border-slate-400 hover:text-slate-600"
+    >
+      i
+    </span>
   );
 }
 
@@ -373,20 +389,18 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
           />
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          {projChartData.length > 0 ? (
-            <CashflowChart
-              data={projChartData}
-              profitLine={projection?.profitDays}
-              breakDate={projection?.firstBreakDate}
-              lowest={projLowest}
-            />
-          ) : (
-            <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
-              {projLoading ? "Loading…" : "No projection data."}
-            </div>
-          )}
-        </div>
+        {projChartData.length > 0 ? (
+          <CashflowChart
+            data={projChartData}
+            profitLine={projection?.profitDays}
+            breakDate={projection?.firstBreakDate}
+            lowest={projLowest}
+          />
+        ) : (
+          <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
+            {projLoading ? "Loading…" : "No projection data."}
+          </div>
+        )}
 
         {projection && (projection.arTotal > 0 || projection.apTotal > 0) && (
           <div className="grid gap-4 sm:grid-cols-3">
@@ -492,24 +506,22 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
           />
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          {slicedForecast.length > 0 ? (
-            <CashflowChart
-              data={slicedForecast.map((d) => ({ date: d.date, balance: d.balance, cashIn: d.cashIn, cashOut: d.cashOut }))}
-              breakDate={fcBreakDay?.date}
-              lowest={fcLowest !== null && fcBreakDay ? { date: fcBreakDay.date, balance: fcBreakDay.balance } : null}
-            />
-          ) : (
-            <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
-              No forecast yet — click &ldquo;Run Forecast&rdquo; to generate one.
-            </div>
-          )}
-        </div>
+        {slicedForecast.length > 0 ? (
+          <CashflowChart
+            data={slicedForecast.map((d) => ({ date: d.date, balance: d.balance, cashIn: d.cashIn, cashOut: d.cashOut }))}
+            breakDate={fcBreakDay?.date}
+            lowest={fcLowest !== null && fcBreakDay ? { date: fcBreakDay.date, balance: fcBreakDay.balance } : null}
+          />
+        ) : (
+          <div className="flex h-[300px] items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400">
+            No forecast yet — click &ldquo;Run Forecast&rdquo; to generate one.
+          </div>
+        )}
       </div>
       )}
 
       {/* ---- Risk alerts ---- */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 border-t border-slate-100 pt-6">
         <h3 className="text-sm font-semibold text-slate-900">Risk Alerts</h3>
         <RiskAlerts alerts={projection?.alerts ?? []} />
       </div>
@@ -637,45 +649,47 @@ function InventorySection({
 
       <InventoryTierSummary items={items} />
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">On Hand vs WIP</h3>
-            <p className="text-xs text-slate-400">Stacked inventory value split between available stock and unfinished supply.</p>
+      <div className="grid gap-6 border-t border-slate-100 pt-6 lg:grid-cols-2">
+        <div>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">On Hand vs WIP</h3>
+              <p className="text-xs text-slate-400">Stacked inventory value split between available stock and unfinished supply.</p>
+            </div>
+            <div className="flex rounded-md border border-slate-300 p-0.5">
+              {(["tier", "vendor"] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => setSupplyView(view)}
+                  className={`rounded px-3 py-1 text-xs font-medium ${
+                    supplyView === view ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {view === "tier" ? "By Tier" : "By Vendor"}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex rounded-md border border-slate-300 p-0.5">
-            {(["tier", "vendor"] as const).map((view) => (
-              <button
-                key={view}
-                type="button"
-                onClick={() => setSupplyView(view)}
-                className={`rounded px-3 py-1 text-xs font-medium ${
-                  supplyView === view ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {view === "tier" ? "By Tier" : "By Vendor"}
-              </button>
-            ))}
-          </div>
+          {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventorySupplyChart items={items} dimension={supplyView} height={200} />}
         </div>
-        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventorySupplyChart items={items} dimension={supplyView} />}
+
+        <div>
+          <h3 className="mb-1 text-sm font-semibold text-slate-900">SKUs by Discount Tier</h3>
+          <p className="mb-2 text-xs text-slate-400">How many SKUs sit at each discount level</p>
+          {loading ? <p className="text-sm text-slate-400">Loading…</p> : <DiscountDistributionChart items={items} height={200} />}
+        </div>
       </div>
 
       {supplyView === "vendor" && !loading && <InventoryVendorRiskNotes items={items} />}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="border-t border-slate-100 pt-6">
         <h3 className="mb-1 text-sm font-semibold text-slate-900">Inventory Value × Days of Supply</h3>
         <p className="mb-2 text-xs text-slate-400">Bubble size = suggested liquidation discount</p>
         {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventoryBubbleChart items={items} />}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="mb-1 text-sm font-semibold text-slate-900">SKUs by Discount Tier</h3>
-        <p className="mb-2 text-xs text-slate-400">How many SKUs sit at each discount level</p>
-        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <DiscountDistributionChart items={items} />}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-6">
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -702,7 +716,7 @@ function InventorySection({
         </Link>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
         {loading ? (
           <p className="text-sm text-slate-400">Loading…</p>
         ) : (
@@ -793,7 +807,7 @@ function PurchasingSection({
 
       <PurchasingTierSummary items={items} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-6">
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={search}
@@ -822,7 +836,7 @@ function PurchasingSection({
         </Link>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
         {loading ? (
           <p className="text-sm text-slate-400">Loading…</p>
         ) : (
@@ -896,13 +910,11 @@ function ReceivablesSection() {
         <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        {loading ? (
-          <p className="text-sm text-slate-400">Loading…</p>
-        ) : (
-          <ReceivablesPriorityBoard items={items} />
-        )}
-      </div>
+      {loading ? (
+        <p className="text-sm text-slate-400">Loading…</p>
+      ) : (
+        <ReceivablesPriorityBoard items={items} />
+      )}
     </SectionShell>
   );
 }
@@ -963,9 +975,7 @@ function PayablesSection() {
         <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PayablesTable items={items} />}
-      </div>
+      {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PayablesTable items={items} />}
     </SectionShell>
   );
 }
@@ -1019,29 +1029,27 @@ function FinancingSection({ defaultGap }: { defaultGap: number }) {
       tone="funding"
       description="Funding options for the projected cash gap, comparing bank loan, inventory liquidation, and AR financing."
     >
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              Gap Amount{defaultGap > 0 && <span className="ml-1 font-normal normal-case text-slate-400">(from projection)</span>}
-            </span>
-            <input
-              type="number"
-              value={gapInput}
-              onChange={(e) => setGapInput(e.target.value)}
-              placeholder="Auto-filled from projection"
-              className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            {loading ? "Comparing…" : "Compare"}
-          </button>
-        </form>
-      </div>
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Gap Amount{defaultGap > 0 && <span className="ml-1 font-normal normal-case text-slate-400">(from projection)</span>}
+          </span>
+          <input
+            type="number"
+            value={gapInput}
+            onChange={(e) => setGapInput(e.target.value)}
+            placeholder="Auto-filled from projection"
+            className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {loading ? "Comparing…" : "Compare"}
+        </button>
+      </form>
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
@@ -1051,7 +1059,7 @@ function FinancingSection({ defaultGap }: { defaultGap: number }) {
       )}
 
       {recommendation && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="border-t border-slate-100 pt-6">
           <FinancingPanel recommendation={recommendation} />
         </div>
       )}

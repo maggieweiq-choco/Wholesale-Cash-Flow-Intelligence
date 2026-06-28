@@ -5,6 +5,8 @@ export function PayablesTable({ items }: { items: PayablesItem[] }) {
     return <p className="py-8 text-center text-sm text-slate-400">No upcoming bills.</p>;
   }
 
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+
   return (
     <table className="w-full text-sm">
       <thead>
@@ -36,6 +38,16 @@ export function PayablesTable({ items }: { items: PayablesItem[] }) {
           </tr>
         ))}
       </tbody>
+      <tfoot>
+        <tr className="border-t border-slate-200">
+          <td className="py-3 pr-4 font-semibold text-slate-900" colSpan={2}>
+            Total
+          </td>
+          <td className="py-3 pr-4 font-semibold text-slate-900">${total.toLocaleString()}</td>
+          <td className="py-3 pr-4" />
+          <td className="py-3" />
+        </tr>
+      </tfoot>
     </table>
   );
 }

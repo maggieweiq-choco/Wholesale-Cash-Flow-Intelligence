@@ -1,4 +1,4 @@
-import type { FinancingRecommendation, LoanScenario } from "@/agents/financing-agent";
+import type { FinancingRecommendation, LoanScenario, LiquidationTierBreakdown } from "@/agents/financing-agent";
 
 const OPTION_LABELS: Record<LoanScenario["optionType"], string> = {
   bank_loan: "Bank Loan",
@@ -18,6 +18,50 @@ function computeMetrics(opt: LoanScenario) {
 
 function pct(n: number, decimals = 1) {
   return `${(n * 100).toFixed(decimals)}%`;
+}
+
+function LiquidationTierTable({ rows }: { rows: LiquidationTierBreakdown[] }) {
+  const totalUsed = rows.reduce((sum, row) => sum + row.cashUsed, 0);
+  const totalCost = rows.reduce((sum, row) => {
+    const fractionUsed = row.cashRaised > 0 ? row.cashUsed / row.cashRaised : 0;
+    return sum + fractionUsed * row.inventoryValue * (row.discountPct / 100);
+  }, 0);
+  const effectiveDiscount = totalUsed > 0 ? totalCost / (totalUsed + totalCost) : 0;
+
+  return (
+    <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+        Liquidation by SKU tier — consumed cheapest tier (A) first
+      </p>
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-slate-400">
+            <th className="pb-1 text-left font-medium">Tier</th>
+            <th className="pb-1 text-right font-medium">Inventory Value</th>
+            <th className="pb-1 text-right font-medium">Discount</th>
+            <th className="pb-1 text-right font-medium">Capacity</th>
+            <th className="pb-1 text-right font-medium">Used For This Gap</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200">
+          {rows.map((row) => (
+            <tr key={row.tier}>
+              <td className="py-1 text-slate-700">{row.tier}</td>
+              <td className="py-1 text-right text-slate-700">${row.inventoryValue.toLocaleString()}</td>
+              <td className="py-1 text-right text-slate-700">{row.discountPct}%</td>
+              <td className="py-1 text-right text-slate-700">${row.cashRaised.toLocaleString()}</td>
+              <td className="py-1 text-right font-medium text-slate-900">
+                {row.cashUsed > 0 ? `$${row.cashUsed.toLocaleString()}` : <span className="text-slate-400">—</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-[11px] text-slate-400">
+        Effective discount on the cash actually raised: {pct(effectiveDiscount, 1)}
+      </p>
+    </div>
+  );
 }
 
 export function FinancingPanel({ recommendation }: { recommendation: FinancingRecommendation }) {
@@ -84,6 +128,10 @@ export function FinancingPanel({ recommendation }: { recommendation: FinancingRe
           </tbody>
         </table>
       </div>
+
+      {recommendation.liquidationByTier && recommendation.liquidationByTier.length > 0 && (
+        <LiquidationTierTable rows={recommendation.liquidationByTier} />
+      )}
 
       <p className="text-xs text-slate-400">
         APR = (cost ÷ raised) × (365 ÷ days). Liquidation is a one-time discount on inventory value — annualizing it would be misleading.

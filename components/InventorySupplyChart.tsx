@@ -10,9 +10,11 @@ const MAX_VENDOR_BARS = 6;
 export function InventorySupplyChart({
   items,
   dimension = "tier",
+  height = 260,
 }: {
   items: DeadStockItemWithValue[];
   dimension?: "tier" | "vendor";
+  height?: number;
 }) {
   if (items.length === 0) {
     return <p className="py-8 text-center text-sm text-slate-400">No inventory supply data to chart.</p>;
@@ -43,7 +45,7 @@ export function InventorySupplyChart({
         });
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
         <XAxis

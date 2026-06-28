@@ -9,7 +9,7 @@ const TIER_COLOR: Record<SkuTier, string> = { A: "#10b981", B: "#94a3b8", C: "#f
 
 // At-a-glance answer to "how many SKUs sit at each discount level" — one
 // bar per tier, sized by SKU count, labeled with that tier's fixed discount.
-export function DiscountDistributionChart({ items }: { items: DeadStockItem[] }) {
+export function DiscountDistributionChart({ items, height = 220 }: { items: DeadStockItem[]; height?: number }) {
   const data = TIERS.map((tier) => ({
     tier,
     label: `${tier} (${TIER_DISCOUNT_PCT[tier]}% off)`,
@@ -21,7 +21,7 @@ export function DiscountDistributionChart({ items }: { items: DeadStockItem[] })
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
         <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={{ stroke: "#e2e8f0" }} tickLine={false} />
