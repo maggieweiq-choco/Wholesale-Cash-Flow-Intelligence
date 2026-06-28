@@ -13,7 +13,9 @@ export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
           <th className="py-2 pr-4">SKU</th>
           <th className="py-2 pr-4">Tier</th>
           <th className="py-2 pr-4">Vendor</th>
-          <th className="py-2 pr-4">Days of Supply</th>
+          <th className="py-2 pr-4 cursor-help" title="Days of Supply = qty on hand ÷ this SKU's own average daily sales. How many days the current stock would last at the recent selling pace.">
+            Days of Supply
+          </th>
           <th className="py-2 pr-4">Recommended Qty</th>
           <th className="py-2 pr-4">Est. Cost</th>
           <th className="py-2">Urgency</th>

@@ -2,20 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { PurchasingTable } from "@/components/PurchasingTable";
 import { PurchasingTierSummary } from "@/components/PurchasingTierSummary";
+import { TierFilterButtons } from "@/components/TierFilterButtons";
 import type { PurchasingItem } from "@/agents/purchasing-agent";
 import { downloadCsv } from "@/lib/csv-export";
 import type { SkuTier } from "@/lib/sku-tiers";
 
-const TIER_OPTIONS: (SkuTier | "all")[] = ["all", "A", "B", "C", "D"];
+const VALID_TIERS: SkuTier[] = ["A", "B", "C", "D"];
 
 export default function PurchasingDetailsPage() {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<PurchasingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState<SkuTier | "all">("all");
+  // Seeded from the dashboard's filter state (passed via ?search=&tiers=) so
+  // following "View full list" doesn't make you re-apply the same filters.
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [tierFilter, setTierFilter] = useState<Set<SkuTier>>(
+    () => new Set((searchParams.get("tiers")?.split(",").filter((t): t is SkuTier => VALID_TIERS.includes(t as SkuTier)) ?? []))
+  );
 
   useEffect(() => {
     fetch("/api/purchasing")
@@ -32,7 +39,7 @@ export default function PurchasingDetailsPage() {
   const filtered = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch = item.sku.toLowerCase().includes(search.toLowerCase());
-      const matchesTier = tierFilter === "all" || item.tier === tierFilter;
+      const matchesTier = tierFilter.size === 0 || tierFilter.has(item.tier);
       return matchesSearch && matchesTier;
     });
   }, [items, search, tierFilter]);
@@ -84,20 +91,19 @@ export default function PurchasingDetailsPage() {
           placeholder="Search SKU…"
           className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
         />
-        <div className="flex rounded-md border border-slate-300 p-0.5">
-          {TIER_OPTIONS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTierFilter(t)}
-              className={`rounded px-3 py-1 text-xs font-medium ${
-                tierFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              {t === "all" ? "All" : `Tier ${t}`}
-            </button>
-          ))}
-        </div>
+        <TierFilterButtons selected={tierFilter} onChange={setTierFilter} />
+        {(search || tierFilter.size > 0) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setTierFilter(new Set());
+            }}
+            className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-900"
+          >
+            Clear filters
+          </button>
+        )}
         <span className="text-xs text-slate-400">{filtered.length} of {items.length} SKUs</span>
       </div>
 

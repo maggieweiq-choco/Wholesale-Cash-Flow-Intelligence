@@ -1,19 +1,19 @@
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { getCompanyData } from "@/lib/queries";
 import { deadStockTool } from "./tools";
-import { TIER_DISCOUNT_PCT, tierSkusBySalesVelocity, productTypeBySku, type SkuTier } from "@/lib/sku-tiers";
+import { TIER_DISCOUNT_PCT, tierSkusBySalesVelocity, dedupeBySku, type SkuTier } from "@/lib/sku-tiers";
 
 export interface DeadStockItem {
   sku: string;
   daysOfSupply: number;
   suggestedDiscountPct: number;
   tier: SkuTier;
-  productType: "Stock" | "Reorder";
   reorderRecommendation: string;
   vendorNegotiationTip: string;
 }
 
 interface InventoryRow {
+  id?: number;
   sku: string;
   qtyOnHand: number;
   vendorName?: string | null;
@@ -32,7 +32,8 @@ interface SalesRow {
 // arithmetic; this is what renders even when Claude is unavailable. Claude
 // only adds judgment-based copy (reorderRecommendation/vendorNegotiationTip)
 // on top — it never changes the discount number or the tier.
-export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[]): DeadStockItem[] {
+export function computeInventoryBase(inventoryRows: InventoryRow[], sales: SalesRow[]): DeadStockItem[] {
+  const inventory = dedupeBySku(inventoryRows);
   const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
   for (const s of sales) {
     const t = new Date(s.soldAt).getTime();
@@ -44,7 +45,6 @@ export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[
   }
 
   const tiers = tierSkusBySalesVelocity(inventory.map((i) => i.sku), sales);
-  const productTypes = productTypeBySku(inventory.map((i) => i.sku), sales);
 
   return inventory.map((inv) => {
     const sale = bySku.get(inv.sku);
@@ -54,11 +54,6 @@ export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[
 
     const tier = tiers.get(inv.sku) ?? "D";
     const suggestedDiscountPct = TIER_DISCOUNT_PCT[tier];
-
-    // "Stock" if most sales are a customer's first purchase of this SKU
-    // (new-customer item); "Reorder" if most are repeat purchases by
-    // returning customers (see lib/sku-tiers.ts productTypeBySku).
-    const productType = productTypes.get(inv.sku) ?? "Stock";
 
     const reorderRecommendation =
       daysOfSupply > 90
@@ -77,7 +72,6 @@ export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[
       daysOfSupply,
       suggestedDiscountPct,
       tier,
-      productType,
       reorderRecommendation,
       vendorNegotiationTip,
     };
@@ -90,7 +84,8 @@ export function computeInventoryBase(inventory: InventoryRow[], sales: SalesRow[
 // actual vendor to contact instead of speaking generically. Discount and
 // tier are never touched here — see computeInventoryBase.
 export async function runInventoryAgent(companyId: string): Promise<DeadStockItem[]> {
-  const { sales, inventory } = await getCompanyData(companyId);
+  const { sales, inventory: rawInventory } = await getCompanyData(companyId);
+  const inventory = dedupeBySku(rawInventory);
 
   if (inventory.length === 0) {
     throw new Error(`No inventory for company ${companyId}. Upload + normalize first.`);

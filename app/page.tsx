@@ -8,6 +8,7 @@ import { DeadStockTable } from "@/components/DeadStockTable";
 import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/InventoryBubbleChart";
 import { InventoryTierSummary } from "@/components/InventoryTierSummary";
 import { DiscountDistributionChart } from "@/components/DiscountDistributionChart";
+import { TierFilterButtons } from "@/components/TierFilterButtons";
 import type { SkuTier } from "@/lib/sku-tiers";
 import { ReceivablesPriorityBoard } from "@/components/ReceivablesPriorityBoard";
 import { PayablesTable } from "@/components/PayablesTable";
@@ -21,13 +22,17 @@ import type { PurchasingItem } from "@/agents/purchasing-agent";
 import type { FinancingRecommendation } from "@/agents/financing-agent";
 
 export default function DashboardPage() {
+  // Shared across Inventory and Purchasing so picking a tier in one filters
+  // the other too — both sections are ranking the same SKUs by the same rule.
+  const [tierFilter, setTierFilter] = useState<Set<SkuTier>>(new Set());
+
   return (
     <main className="flex flex-1 flex-col">
       <CashFlowSection />
       <SectionDivider />
-      <InventorySection />
+      <InventorySection tierFilter={tierFilter} setTierFilter={setTierFilter} />
       <SectionDivider />
-      <PurchasingSection />
+      <PurchasingSection tierFilter={tierFilter} setTierFilter={setTierFilter} />
       <SectionDivider />
       <ReceivablesSection />
       <SectionDivider />
@@ -375,15 +380,19 @@ interface InventoryMetrics {
 
 const PREVIEW_ROWS = 10;
 
-function InventorySection() {
+function InventorySection({
+  tierFilter,
+  setTierFilter,
+}: {
+  tierFilter: Set<SkuTier>;
+  setTierFilter: (next: Set<SkuTier>) => void;
+}) {
   const [items, setItems] = useState<DeadStockItemWithValue[]>([]);
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState<SkuTier | "all">("all");
-  const [typeFilter, setTypeFilter] = useState<"all" | "Stock" | "Reorder">("all");
 
   async function load() {
     setLoading(true);
@@ -413,12 +422,13 @@ function InventorySection() {
   }, []);
 
   const filtered = items.filter(
-    (item) =>
-      item.sku.toLowerCase().includes(search.toLowerCase()) &&
-      (tierFilter === "all" || item.tier === tierFilter) &&
-      (typeFilter === "all" || item.productType === typeFilter)
+    (item) => item.sku.toLowerCase().includes(search.toLowerCase()) && (tierFilter.size === 0 || tierFilter.has(item.tier))
   );
   const preview = filtered.slice(0, PREVIEW_ROWS);
+  const detailsHref = `/inventory/details?${new URLSearchParams({
+    ...(search ? { search } : {}),
+    ...(tierFilter.size ? { tiers: [...tierFilter].join(",") } : {}),
+  }).toString()}`;
 
   return (
     <SectionShell
@@ -479,36 +489,21 @@ function InventorySection() {
             placeholder="Search SKU…"
             className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           />
-          <div className="flex rounded-md border border-slate-300 p-0.5">
-            {(["all", "A", "B", "C", "D"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTierFilter(t)}
-                className={`rounded px-3 py-1 text-xs font-medium ${
-                  tierFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {t === "all" ? "All Tiers" : `Tier ${t}`}
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-md border border-slate-300 p-0.5">
-            {(["all", "Stock", "Reorder"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTypeFilter(t)}
-                className={`rounded px-3 py-1 text-xs font-medium ${
-                  typeFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {t === "all" ? "All Types" : t}
-              </button>
-            ))}
-          </div>
+          <TierFilterButtons selected={tierFilter} onChange={setTierFilter} />
+          {(search || tierFilter.size > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setTierFilter(new Set());
+              }}
+              className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-900"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
-        <Link href="/inventory/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
+        <Link href={detailsHref} className="text-sm font-medium text-slate-900 underline underline-offset-2">
           View full list & export ({items.length} SKUs) →
         </Link>
       </div>
@@ -531,12 +526,17 @@ function InventorySection() {
   );
 }
 
-function PurchasingSection() {
+function PurchasingSection({
+  tierFilter,
+  setTierFilter,
+}: {
+  tierFilter: Set<SkuTier>;
+  setTierFilter: (next: Set<SkuTier>) => void;
+}) {
   const [items, setItems] = useState<PurchasingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState<SkuTier | "all">("all");
 
   async function load() {
     setLoading(true);
@@ -562,9 +562,13 @@ function PurchasingSection() {
   }, []);
 
   const filtered = items.filter(
-    (item) => item.sku.toLowerCase().includes(search.toLowerCase()) && (tierFilter === "all" || item.tier === tierFilter)
+    (item) => item.sku.toLowerCase().includes(search.toLowerCase()) && (tierFilter.size === 0 || tierFilter.has(item.tier))
   );
   const preview = filtered.slice(0, PREVIEW_ROWS);
+  const detailsHref = `/purchasing/details?${new URLSearchParams({
+    ...(search ? { search } : {}),
+    ...(tierFilter.size ? { tiers: [...tierFilter].join(",") } : {}),
+  }).toString()}`;
 
   return (
     <SectionShell
@@ -595,22 +599,21 @@ function PurchasingSection() {
             placeholder="Search SKU…"
             className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
           />
-          <div className="flex rounded-md border border-slate-300 p-0.5">
-            {(["all", "A", "B", "C", "D"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTierFilter(t)}
-                className={`rounded px-3 py-1 text-xs font-medium ${
-                  tierFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {t === "all" ? "All Tiers" : `Tier ${t}`}
-              </button>
-            ))}
-          </div>
+          <TierFilterButtons selected={tierFilter} onChange={setTierFilter} />
+          {(search || tierFilter.size > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setTierFilter(new Set());
+              }}
+              className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-900"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
-        <Link href="/purchasing/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
+        <Link href={detailsHref} className="text-sm font-medium text-slate-900 underline underline-offset-2">
           View full list & export ({items.length} SKUs) →
         </Link>
       </div>

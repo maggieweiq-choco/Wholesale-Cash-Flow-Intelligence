@@ -26,7 +26,6 @@ interface SalesRow {
   sku: string;
   soldQty: number;
   soldAt: string;
-  customerId?: string | null;
 }
 
 function tierForPercentile(rankPct: number): SkuTier {
@@ -58,39 +57,15 @@ export function tierSkusBySalesVelocity(skus: string[], sales: SalesRow[]): Map<
   return tiers;
 }
 
-// A SKU's product type reflects how customers actually buy it: "Stock" if
-// most sales are a customer's first purchase of that SKU (new-customer
-// acquisition item); "Reorder" if most sales are repeat purchases by a
-// customer who has bought that SKU before (recurring restock demand).
-// Sales rows without a customerId can't be classified and are ignored —
-// a SKU with no attributable sales defaults to "Stock".
-export function productTypeBySku(skus: string[], sales: SalesRow[]): Map<string, "Stock" | "Reorder"> {
-  const attributed = sales.filter((s) => s.customerId);
-
-  // First purchase date per (customerId, sku) pair.
-  const firstPurchase = new Map<string, number>();
-  for (const s of attributed) {
-    const key = `${s.customerId}::${s.sku}`;
-    const t = new Date(s.soldAt).getTime();
-    const prev = firstPurchase.get(key);
-    if (prev === undefined || t < prev) firstPurchase.set(key, t);
+// Inventory is a current-state snapshot, so a SKU should appear once.
+// lib/etl.ts prevents new duplicates on re-upload, but this guards against
+// any stale duplicate rows already in Aurora from before that fix — keeps
+// the most recently inserted row per SKU (highest id).
+export function dedupeBySku<T extends { sku: string; id?: number }>(rows: T[]): T[] {
+  const bySku = new Map<string, T>();
+  for (const row of rows) {
+    const prev = bySku.get(row.sku);
+    if (!prev || (row.id ?? 0) >= (prev.id ?? 0)) bySku.set(row.sku, row);
   }
-
-  const counts = new Map<string, { first: number; repeat: number }>();
-  for (const s of attributed) {
-    const key = `${s.customerId}::${s.sku}`;
-    const t = new Date(s.soldAt).getTime();
-    const isFirst = t === firstPurchase.get(key);
-    const entry = counts.get(s.sku) ?? { first: 0, repeat: 0 };
-    if (isFirst) entry.first += 1;
-    else entry.repeat += 1;
-    counts.set(s.sku, entry);
-  }
-
-  const result = new Map<string, "Stock" | "Reorder">();
-  for (const sku of skus) {
-    const entry = counts.get(sku);
-    result.set(sku, entry && entry.repeat > entry.first ? "Reorder" : "Stock");
-  }
-  return result;
+  return [...bySku.values()];
 }

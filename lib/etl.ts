@@ -61,9 +61,20 @@ export async function normalizeCompany(companyId: string) {
   const raw = await readRawRows(companyId);
 
   const salesRows = raw.filter((r) => r.type === "sales").map((r) => r.data);
-  const inventoryRows = raw.filter((r) => r.type === "inventory").map((r) => r.data);
   const invoiceRows = raw.filter((r) => r.type === "invoice").map((r) => r.data);
   const payableRows = raw.filter((r) => r.type === "payable").map((r) => r.data);
+
+  // Inventory is a current-state snapshot, not a transaction log — unlike
+  // sales/invoices/payables, re-uploading inventory.csv should replace a
+  // SKU's row, not add another one. Raw DynamoDB rows are never deleted, so
+  // keep only the most recently uploaded row per SKU.
+  const latestInventoryBySku = new Map<string, RawUploadRow>();
+  for (const r of raw) {
+    if (r.type !== "inventory") continue;
+    const prev = latestInventoryBySku.get(r.data.sku);
+    if (!prev || r.uploadedAt > prev.uploadedAt) latestInventoryBySku.set(r.data.sku, r);
+  }
+  const inventoryRows = [...latestInventoryBySku.values()].map((r) => r.data);
 
   // Clear prior normalized data for this company.
   await Promise.all([

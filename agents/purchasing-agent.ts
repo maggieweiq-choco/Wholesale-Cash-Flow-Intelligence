@@ -1,7 +1,7 @@
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { getCompanyData } from "@/lib/queries";
 import { purchasingRecommendationTool } from "./tools";
-import { tierSkusBySalesVelocity, type SkuTier } from "@/lib/sku-tiers";
+import { tierSkusBySalesVelocity, dedupeBySku, type SkuTier } from "@/lib/sku-tiers";
 
 export interface PurchasingItem {
   sku: string;
@@ -14,6 +14,7 @@ export interface PurchasingItem {
 }
 
 interface InventoryRow {
+  id?: number;
   sku: string;
   qtyOnHand: number;
   unitCost: string | null;
@@ -35,7 +36,8 @@ const TARGET_DAYS_OF_SUPPLY = 30;
 // that doesn't sell just ties up more cash. Days-of-supply/qty/cost are
 // computed straight from Aurora data with plain arithmetic; this is what
 // renders even when Claude is unavailable.
-export function computePurchasingBase(inventory: InventoryRow[], sales: SalesRow[]): PurchasingItem[] {
+export function computePurchasingBase(inventoryRows: InventoryRow[], sales: SalesRow[]): PurchasingItem[] {
+  const inventory = dedupeBySku(inventoryRows);
   const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
   for (const s of sales) {
     const t = new Date(s.soldAt).getTime();
@@ -88,7 +90,8 @@ export function computePurchasingBase(inventory: InventoryRow[], sales: SalesRow
 // supplier from the inventory row when known. Tier/urgency/qty are never
 // touched here — see computePurchasingBase.
 export async function runPurchasingAgent(companyId: string): Promise<PurchasingItem[]> {
-  const { sales, inventory } = await getCompanyData(companyId);
+  const { sales, inventory: rawInventory } = await getCompanyData(companyId);
+  const inventory = dedupeBySku(rawInventory);
 
   if (inventory.length === 0) {
     throw new Error(`No inventory for company ${companyId}. Upload + normalize first.`);

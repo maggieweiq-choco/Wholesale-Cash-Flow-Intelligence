@@ -30,9 +30,9 @@ export async function GET() {
   const agentError = Array.isArray(agentResult) ? null : agentResult.error;
 
   // Claude (when available) only contributes reorderRecommendation /
-  // vendorNegotiationTip copy — daysOfSupply, suggestedDiscountPct, tier,
-  // and productType always come from the fixed deterministic rule so the
-  // numbers shown are never AI judgment calls.
+  // vendorNegotiationTip copy — daysOfSupply, suggestedDiscountPct, and
+  // tier always come from the fixed deterministic rule so the numbers
+  // shown are never AI judgment calls.
   const items = Array.isArray(agentResult)
     ? agentResult.map((aiItem) => {
         const base = baseBySku.get(aiItem.sku);
@@ -42,8 +42,12 @@ export async function GET() {
       })
     : baseItems;
 
+  // Final safety net: guarantee one row per SKU even if Claude echoed a
+  // duplicate from a stale/unclean inventory snapshot.
+  const uniqueItems = [...new Map(items.map((item) => [item.sku, item])).values()];
+
   const bySku = new Map(companyData.inventory.map((row) => [row.sku, row]));
-  const itemsWithValue = items.map((item) => {
+  const itemsWithValue = uniqueItems.map((item) => {
     const row = bySku.get(item.sku);
     const inventoryValue = row ? row.qtyOnHand * Number(row.unitCost ?? 0) : 0;
     return { ...item, inventoryValue };

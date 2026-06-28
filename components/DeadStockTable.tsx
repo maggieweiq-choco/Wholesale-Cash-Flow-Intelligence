@@ -11,8 +11,9 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
         <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
           <th className="py-2 pr-4">SKU</th>
           <th className="py-2 pr-4">Tier</th>
-          <th className="py-2 pr-4">Type</th>
-          <th className="py-2 pr-4">Days of Supply</th>
+          <th className="py-2 pr-4 cursor-help" title="Days of Supply = qty on hand ÷ this SKU's own average daily sales. How many days the current stock would last at the recent selling pace.">
+            Days of Supply
+          </th>
           <th className="py-2 pr-4">Suggested Discount</th>
           <th className="py-2">Recommendations</th>
         </tr>
@@ -24,7 +25,6 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
             <td className="py-3 pr-4">
               <TierBadge tier={item.tier} />
             </td>
-            <td className="py-3 pr-4 text-slate-600">{item.productType}</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
             <td className="py-3 pr-4">
               <DiscountBadge pct={item.suggestedDiscountPct} />
