@@ -16,8 +16,11 @@ import {
 import { parseCsv } from "@/lib/csv-parser";
 import { dynamo, RAW_TABLE_NAME } from "@/lib/dynamo";
 
-function isMissingWipColumnError(error: unknown): boolean {
-  return error instanceof Error && /qty_wip|column .* does not exist/i.test(error.message);
+function isMissingInventoryColumnError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /qty_wip|vendor_lead_time_days|return_rate_pct|obsolete_risk|column .* does not exist/i.test(error.message)
+  );
 }
 
 // Aurora Data API caps a single response at 1MB. A company with thousands
@@ -108,7 +111,7 @@ async function loadInventoryRows(companyId: string) {
       };
     });
   } catch (error) {
-    if (!isMissingWipColumnError(error)) throw error;
+    if (!isMissingInventoryColumnError(error)) throw error;
 
     const legacyRows = await selectAllPaginated((limit, offset) =>
       db
@@ -128,7 +131,13 @@ async function loadInventoryRows(companyId: string) {
         .offset(offset)
     );
 
-    return legacyRows.map((row) => ({ ...row, qtyWip: rawWipBySku.get(row.sku) ?? seedWipBySku.get(row.sku) ?? 0 }));
+    return legacyRows.map((row) => ({
+      ...row,
+      qtyWip: rawWipBySku.get(row.sku) ?? seedWipBySku.get(row.sku) ?? 0,
+      vendorLeadTimeDays: 14,
+      returnRatePct: "0",
+      obsoleteRisk: "low",
+    }));
   }
 }
 

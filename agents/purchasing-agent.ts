@@ -6,6 +6,7 @@ import { tierSkusBySalesVelocity, dedupeBySku, type SkuTier } from "@/lib/sku-ti
 export interface PurchasingItem {
   sku: string;
   vendorName?: string;
+  vendorLeadTimeDays?: number;
   daysOfSupply: number;
   tier: SkuTier;
   recommendedQty: number;
@@ -19,6 +20,9 @@ interface InventoryRow {
   qtyOnHand: number;
   unitCost: string | null;
   vendorName?: string | null;
+  vendorLeadTimeDays?: number;
+  returnRatePct?: string | null;
+  obsoleteRisk?: string | null;
 }
 
 interface SalesRow {
@@ -74,6 +78,7 @@ export function computePurchasingBase(inventoryRows: InventoryRow[], sales: Sale
       return {
         sku: inv.sku,
         vendorName: inv.vendorName ?? undefined,
+        vendorLeadTimeDays: inv.vendorLeadTimeDays ?? 14,
         daysOfSupply,
         tier,
         recommendedQty,

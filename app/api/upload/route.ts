@@ -33,5 +33,7 @@ export async function POST(request: NextRequest) {
     }))
   );
 
-  return NextResponse.json({ uploadId, rowCount: rows.length });
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+
+  return NextResponse.json({ uploadId, rowCount: rows.length, columns });
 }

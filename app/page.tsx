@@ -53,23 +53,38 @@ function SectionDivider() {
 function SectionShell({
   id,
   title,
+  domain,
+  question,
   description,
+  tone = "neutral",
   action,
   children,
 }: {
   id: string;
   title: string;
+  domain: string;
+  question: string;
   description?: string;
+  tone?: "cash" | "inventory" | "purchasing" | "cashIn" | "cashOut" | "funding" | "neutral";
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const toneClass = getSectionToneClass(tone);
+
   return (
     <section id={id} className="scroll-mt-20">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+          <div className="max-w-2xl">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${toneClass.badge}`}>
+                {domain}
+              </span>
+              <span className={`h-1.5 w-1.5 rounded-full ${toneClass.dot}`} />
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">{question}</span>
+            </div>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h2>
-            {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+            {description && <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>}
           </div>
           {action}
         </div>
@@ -77,6 +92,25 @@ function SectionShell({
       </div>
     </section>
   );
+}
+
+function getSectionToneClass(tone: "cash" | "inventory" | "purchasing" | "cashIn" | "cashOut" | "funding" | "neutral") {
+  switch (tone) {
+    case "cash":
+      return { badge: "border-sky-200 bg-sky-50 text-sky-700", dot: "bg-sky-500" };
+    case "inventory":
+      return { badge: "border-teal-200 bg-teal-50 text-teal-700", dot: "bg-teal-500" };
+    case "purchasing":
+      return { badge: "border-violet-200 bg-violet-50 text-violet-700", dot: "bg-violet-500" };
+    case "cashIn":
+      return { badge: "border-emerald-200 bg-emerald-50 text-emerald-700", dot: "bg-emerald-500" };
+    case "cashOut":
+      return { badge: "border-amber-200 bg-amber-50 text-amber-700", dot: "bg-amber-500" };
+    case "funding":
+      return { badge: "border-indigo-200 bg-indigo-50 text-indigo-700", dot: "bg-indigo-500" };
+    default:
+      return { badge: "border-slate-200 bg-slate-50 text-slate-600", dot: "bg-slate-400" };
+  }
 }
 
 function KpiCard({
@@ -248,7 +282,10 @@ function CashFlowSection() {
     <SectionShell
       id="cashflow"
       title="Cash Flow"
-      description="Rule-based cash analysis from real data, with AI used only as an optional enhancement layer."
+      domain="Overall Timeline"
+      question="Will cash break?"
+      tone="cash"
+      description="Shows the forward cash runway: expected cash in, scheduled cash out, lowest balance, and the first projected cash gap."
       action={
         <form
           onSubmit={(e) => {
@@ -480,7 +517,10 @@ function InventorySection({
     <SectionShell
       id="inventory"
       title="Dead Stock"
-      description="ERP-style inventory review across on-hand stock, working-in-progress, days of supply, and liquidation/reorder actions."
+      domain="Cash Tied Up"
+      question="Where is cash stuck?"
+      tone="inventory"
+      description="Inventory health across on-hand stock, work in progress, days of supply, and liquidation or supplier actions."
       action={
         <button
           type="button"
@@ -664,7 +704,10 @@ function PurchasingSection({
     <SectionShell
       id="purchasing"
       title="Purchasing Recommendations"
-      description="SKUs to reorder, how much, and the estimated cost — based on real sales velocity vs. inventory on hand."
+      domain="Cash To Spend"
+      question="What should we buy?"
+      tone="purchasing"
+      description="Reorder queue for SKUs that need replenishment, with quantity, urgency, tier, and estimated spend."
       action={
         <button
           type="button"
@@ -763,7 +806,10 @@ function ReceivablesSection() {
     <SectionShell
       id="receivables"
       title="Collections Priority"
-      description="ERP-style collections queue, grouped from most urgent to routine follow-up."
+      domain="Cash In"
+      question="Who should pay us first?"
+      tone="cashIn"
+      description="Collections queue for overdue customer invoices, ranked by age, amount, and customer payment risk."
       action={
         <button
           type="button"
@@ -827,7 +873,10 @@ function PayablesSection() {
     <SectionShell
       id="payables"
       title="Upcoming Bills"
-      description="Vendor bills ranked by payment urgency — due-soon and large bills first."
+      domain="Cash Out"
+      question="Who do we need to pay?"
+      tone="cashOut"
+      description="Vendor payment queue for open bills, ranked by due-date urgency and bill amount."
       action={
         <button
           type="button"
@@ -889,7 +938,10 @@ function FinancingSection() {
     <SectionShell
       id="financing"
       title="Financing Recommendation"
-      description="Rule-based comparison of bank loan, inventory liquidation, and AR financing to close a projected cash gap."
+      domain="Cash To Raise"
+      question="How do we cover the gap?"
+      tone="funding"
+      description="Funding options for the projected cash gap, comparing bank loan, inventory liquidation, and AR financing."
     >
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">

@@ -45,6 +45,22 @@ export async function GET() {
   const uniqueItems = [...new Map(baseItems.map((item) => [item.sku, item])).values()];
 
   const bySku = new Map(companyData.inventory.map((row) => [row.sku, row]));
+  const salesMarginAccumulator = new Map<string, { revenue: number; cogs: number }>();
+  const grossMarginBySku = new Map<string, number | null>();
+  for (const sale of companyData.sales) {
+    const inv = bySku.get(sale.sku);
+    const unitCost = Number(inv?.unitCost ?? 0);
+    const revenue = Number(sale.revenue ?? 0);
+    const cogs = sale.soldQty * unitCost;
+    const existing = salesMarginAccumulator.get(sale.sku) ?? { revenue: 0, cogs: 0 };
+    existing.revenue += revenue;
+    existing.cogs += cogs;
+    salesMarginAccumulator.set(sale.sku, existing);
+  }
+  for (const [sku, totals] of salesMarginAccumulator.entries()) {
+    grossMarginBySku.set(sku, totals.revenue > 0 ? ((totals.revenue - totals.cogs) / totals.revenue) * 100 : null);
+  }
+
   const itemsWithValue = uniqueItems.map((item) => {
     const row = bySku.get(item.sku);
     const inventoryValue = row ? row.qtyOnHand * Number(row.unitCost ?? 0) : 0;
@@ -60,6 +76,10 @@ export async function GET() {
       totalSupplyQty,
       vendorName: row?.vendorName ?? null,
       vendorCountry: row?.vendorCountry ?? null,
+      grossMarginPct: grossMarginBySku.get(item.sku) ?? null,
+      vendorLeadTimeDays: row?.vendorLeadTimeDays ?? 14,
+      returnRatePct: Number(row?.returnRatePct ?? 0),
+      obsoleteRisk: row?.obsoleteRisk ?? "low",
     };
   });
 

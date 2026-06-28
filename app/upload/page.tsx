@@ -58,6 +58,7 @@ export default function UploadPage() {
       }
 
       const summaries: string[] = [];
+      const detectedColumns: string[] = [];
       for (const { type, file } of pending) {
         const formData = new FormData();
         formData.append("type", type);
@@ -66,10 +67,13 @@ export default function UploadPage() {
         const result = await parseResponse(response);
         if (!response.ok) throw new Error(`${type}: ${result.error ?? "upload failed"}`);
         summaries.push(`${result.rowCount} ${type}`);
+        if (Array.isArray(result.columns)) {
+          detectedColumns.push(`${type}: ${result.columns.length} columns`);
+        }
       }
       setUploaded(true);
       setStatus({
-        text: `Uploaded ${summaries.join(", ")} rows — next, click "Normalize" below to load it into the dashboard.`,
+        text: `Uploaded ${summaries.join(", ")} rows. Detected ${detectedColumns.join(", ")} and preserved the raw columns in DynamoDB — next, click "Normalize" below to load standard fields into the dashboard.`,
         tone: "success",
       });
       form.reset();
@@ -88,9 +92,22 @@ export default function UploadPage() {
       const response = await fetch("/api/normalize", { method: "POST" });
       const result = await parseResponse(response);
       if (response.ok) {
+        const columnSummary =
+          result.counts.columnsByType && typeof result.counts.columnsByType === "object"
+            ? Object.entries(result.counts.columnsByType)
+                .map(([type, columns]) => `${type}: ${(columns as string[]).length} columns`)
+                .join(", ")
+            : "";
+        const customColumnSummary =
+          result.counts.customColumnsByType && typeof result.counts.customColumnsByType === "object"
+            ? Object.entries(result.counts.customColumnsByType)
+                .filter(([, columns]) => Array.isArray(columns) && columns.length > 0)
+                .map(([type, columns]) => `${type}: ${(columns as string[]).join(", ")}`)
+                .join("; ")
+            : "";
         setNormalized(true);
         setStatus({
-          text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers, ${result.counts.payables ?? 0} payables, ${result.counts.vendors ?? 0} vendors`,
+          text: `Normalized into Aurora — ${result.counts.sales} sales, ${result.counts.inventory} inventory, ${result.counts.invoices} invoices, ${result.counts.customers} customers, ${result.counts.payables ?? 0} payables, ${result.counts.vendors ?? 0} vendors${columnSummary ? `. Raw columns preserved in DynamoDB (${columnSummary})` : ""}${customColumnSummary ? `. Custom attributes recognized (${customColumnSummary})` : ""}`,
           tone: "success",
         });
       } else {

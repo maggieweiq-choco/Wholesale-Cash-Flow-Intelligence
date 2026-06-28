@@ -71,6 +71,7 @@ function PurchasingDetailsContent() {
         sku: item.sku,
         tier: item.tier,
         vendorName: item.vendorName ?? "",
+        vendorLeadTimeDays: item.vendorLeadTimeDays ?? "",
         daysOfSupply: item.daysOfSupply,
         recommendedQty: item.recommendedQty,
         estimatedCost: item.estimatedCost,

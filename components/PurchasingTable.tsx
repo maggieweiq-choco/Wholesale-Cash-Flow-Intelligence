@@ -13,6 +13,9 @@ export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
           <th className="py-2 pr-4">SKU</th>
           <th className="py-2 pr-4">Tier</th>
           <th className="py-2 pr-4">Vendor</th>
+          <th className="py-2 pr-4 cursor-help" title="Supplier lead time from inventory master data. This is now captured so reorder logic can account for longer replenishment cycles.">
+            Lead Time
+          </th>
           <th className="py-2 pr-4 cursor-help" title="Days of Supply = qty on hand ÷ this SKU's own average daily sales. How many days the current stock would last at the recent selling pace.">
             Days of Supply
           </th>
@@ -29,6 +32,7 @@ export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
               <TierBadge tier={item.tier} />
             </td>
             <td className="py-3 pr-4 text-slate-600">{item.vendorName ?? "—"}</td>
+            <td className="py-3 pr-4 text-slate-600">{item.vendorLeadTimeDays ?? 14}d</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
             <td className="py-3 pr-4 text-slate-600">{item.recommendedQty.toLocaleString()}</td>
             <td className="py-3 pr-4 text-slate-600">${item.estimatedCost.toLocaleString()}</td>

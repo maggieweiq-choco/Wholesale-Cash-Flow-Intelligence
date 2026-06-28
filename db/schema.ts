@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, numeric, date, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, date, timestamp, boolean, primaryKey, jsonb } from "drizzle-orm/pg-core";
 
 // 1 user = 1 company: companyId is the tenant key used across every other
 // table, generated at signup and never typed by the user.
@@ -18,6 +18,7 @@ export const skuSalesHistory = pgTable("sku_sales_history", {
   soldQty: integer("sold_qty").notNull(),
   revenue: numeric("revenue", { precision: 12, scale: 2 }),
   soldAt: date("sold_at").notNull(),
+  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
 });
 
 export const inventory = pgTable("inventory", {
@@ -29,6 +30,10 @@ export const inventory = pgTable("inventory", {
   unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
   vendorName: text("vendor_name"),
   vendorCountry: text("vendor_country"),
+  vendorLeadTimeDays: integer("vendor_lead_time_days").notNull().default(14),
+  returnRatePct: numeric("return_rate_pct", { precision: 5, scale: 2 }).notNull().default("0"),
+  obsoleteRisk: text("obsolete_risk").notNull().default("low"), // low / medium / high
+  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
@@ -41,6 +46,7 @@ export const invoices = pgTable("invoices", {
   dueAt: date("due_at").notNull(),
   paidAt: date("paid_at"),
   status: text("status").default("unpaid"), // unpaid / partial / paid
+  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
 });
 
 export const customers = pgTable(
@@ -66,6 +72,7 @@ export const payables = pgTable("payables", {
   dueAt: date("due_at").notNull(),
   paidAt: date("paid_at"),
   status: text("status").default("unpaid"), // unpaid / partial / paid
+  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
 });
 
 export const vendors = pgTable(

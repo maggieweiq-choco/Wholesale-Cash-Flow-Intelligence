@@ -1,5 +1,5 @@
 import { QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { dynamo, RAW_TABLE_NAME } from "@/lib/dynamo";
 import { db } from "@/lib/aurora";
 import {
@@ -14,7 +14,8 @@ import type { RawUploadRow } from "@/db/dynamo";
 
 // Expected CSV columns (the seed files in /seed match these):
 //   sales.csv:     sku, sold_qty, revenue, sold_at(YYYY-MM-DD), customer_id(optional)
-//   inventory.csv: sku, qty_on_hand, qty_wip(optional), unit_cost, vendor_name(optional), vendor_country(optional)
+//   inventory.csv: sku, qty_on_hand, qty_wip(optional), unit_cost, vendor_name(optional), vendor_country(optional),
+//                  vendor_lead_time_days(optional), return_rate_pct(optional), obsolete_risk(optional: low/medium/high)
 //   invoices.csv:  customer_id, customer_name, amount, issued_at, due_at, paid_at(optional)
 //   payables.csv:  vendor_id, vendor_name, amount, issued_at, due_at, paid_at(optional)
 
@@ -33,6 +34,66 @@ async function insertInChunks<T>(
 ): Promise<void> {
   for (let i = 0; i < rows.length; i += chunkSize) {
     await insertFn(rows.slice(i, i + chunkSize));
+  }
+}
+
+function customAttributes(
+  row: Record<string, string>,
+  standardColumns: readonly string[]
+): Record<string, string> {
+  const standard = new Set(standardColumns);
+  return Object.fromEntries(
+    Object.entries(row).filter(([key, value]) => !standard.has(key) && value != null && String(value).trim() !== "")
+  );
+}
+
+function isMissingCustomAttributesColumnError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : JSON.stringify(error);
+
+  return /custom_attributes|column .* does not exist/i.test(message);
+}
+
+async function insertWithCustomAttributesFallback<T extends { customAttributes: Record<string, string> }>(
+  rows: T[],
+  insertFn: (chunk: T[]) => Promise<unknown>,
+  legacyInsertFn: (chunk: Omit<T, "customAttributes">[]) => Promise<unknown>
+): Promise<void> {
+  try {
+    await insertInChunks(rows, insertFn);
+  } catch (error) {
+    if (!isMissingCustomAttributesColumnError(error)) throw error;
+    const legacyRows = rows.map((row) => {
+      const { customAttributes: ignoredCustomAttributes, ...legacyRow } = row;
+      void ignoredCustomAttributes;
+      return legacyRow;
+    });
+    await insertInChunks(legacyRows, legacyInsertFn);
+  }
+}
+
+const SALES_STANDARD_COLUMNS = ["sku", "sold_qty", "revenue", "sold_at", "customer_id"] as const;
+const INVENTORY_STANDARD_COLUMNS = ["sku", "qty_on_hand", "qty_wip", "unit_cost", "vendor_name", "vendor_country"] as const;
+const INVOICE_STANDARD_COLUMNS = ["customer_id", "customer_name", "amount", "issued_at", "due_at", "paid_at"] as const;
+const PAYABLE_STANDARD_COLUMNS = ["vendor_id", "vendor_name", "amount", "issued_at", "due_at", "paid_at"] as const;
+
+async function ensureFlexibleColumns(): Promise<void> {
+  const statements = [
+    `ALTER TABLE "sku_sales_history" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL`,
+    `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "vendor_lead_time_days" integer DEFAULT 14 NOT NULL`,
+    `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "return_rate_pct" numeric(5, 2) DEFAULT '0' NOT NULL`,
+    `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "obsolete_risk" text DEFAULT 'low' NOT NULL`,
+    `ALTER TABLE "inventory" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL`,
+    `ALTER TABLE "invoices" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL`,
+    `ALTER TABLE "payables" ADD COLUMN IF NOT EXISTS "custom_attributes" jsonb DEFAULT '{}'::jsonb NOT NULL`,
+  ];
+
+  for (const statement of statements) {
+    await db.execute(sql.raw(statement));
   }
 }
 
@@ -77,6 +138,21 @@ async function readRawRows(companyId: string): Promise<RawUploadRow[]> {
 // company's existing rows first so re-running an upload doesn't duplicate.
 export async function normalizeCompany(companyId: string) {
   const raw = await readRawRows(companyId);
+  await ensureFlexibleColumns();
+  const columnsByType = raw.reduce<Record<string, string[]>>((acc, row) => {
+    const existing = new Set(acc[row.type] ?? []);
+    for (const column of Object.keys(row.data)) existing.add(column);
+    acc[row.type] = [...existing].sort();
+    return acc;
+  }, {});
+  const customColumnsByType: Record<string, string[]> = {
+    sales: (columnsByType.sales ?? []).filter((column) => !SALES_STANDARD_COLUMNS.includes(column as (typeof SALES_STANDARD_COLUMNS)[number])),
+    inventory: (columnsByType.inventory ?? []).filter(
+      (column) => !INVENTORY_STANDARD_COLUMNS.includes(column as (typeof INVENTORY_STANDARD_COLUMNS)[number])
+    ),
+    invoice: (columnsByType.invoice ?? []).filter((column) => !INVOICE_STANDARD_COLUMNS.includes(column as (typeof INVOICE_STANDARD_COLUMNS)[number])),
+    payable: (columnsByType.payable ?? []).filter((column) => !PAYABLE_STANDARD_COLUMNS.includes(column as (typeof PAYABLE_STANDARD_COLUMNS)[number])),
+  };
 
   // Sales is a genuine transaction log — every row is a separate sale, so it
   // is never deduped.
@@ -123,8 +199,13 @@ export async function normalizeCompany(companyId: string) {
       soldQty: Number(d.sold_qty ?? 0),
       revenue: String(d.revenue ?? "0"),
       soldAt: d.sold_at,
+      customAttributes: customAttributes(d, SALES_STANDARD_COLUMNS),
     }));
-    await insertInChunks(rows, (chunk) => db.insert(skuSalesHistory).values(chunk));
+    await insertWithCustomAttributesFallback(
+      rows,
+      (chunk) => db.insert(skuSalesHistory).values(chunk),
+      (chunk) => db.insert(skuSalesHistory).values(chunk)
+    );
   }
 
   // --- inventory ---
@@ -137,8 +218,16 @@ export async function normalizeCompany(companyId: string) {
       unitCost: String(d.unit_cost ?? "0"),
       vendorName: d.vendor_name && d.vendor_name.trim() !== "" ? d.vendor_name : null,
       vendorCountry: d.vendor_country && d.vendor_country.trim() !== "" ? d.vendor_country : null,
+      vendorLeadTimeDays: Number(d.vendor_lead_time_days ?? 14),
+      returnRatePct: String(d.return_rate_pct ?? "0"),
+      obsoleteRisk: d.obsolete_risk && d.obsolete_risk.trim() !== "" ? d.obsolete_risk : "low",
+      customAttributes: customAttributes(d, INVENTORY_STANDARD_COLUMNS),
     }));
-    await insertInChunks(rows, (chunk) => db.insert(inventory).values(chunk));
+    await insertWithCustomAttributesFallback(
+      rows,
+      (chunk) => db.insert(inventory).values(chunk),
+      (chunk) => db.insert(inventory).values(chunk)
+    );
   }
 
   // --- invoices + derived customers ---
@@ -151,8 +240,13 @@ export async function normalizeCompany(companyId: string) {
       dueAt: d.due_at,
       paidAt: d.paid_at && d.paid_at.trim() !== "" ? d.paid_at : null,
       status: d.paid_at && d.paid_at.trim() !== "" ? "paid" : "unpaid",
+      customAttributes: customAttributes(d, INVOICE_STANDARD_COLUMNS),
     }));
-    await insertInChunks(rows, (chunk) => db.insert(invoices).values(chunk));
+    await insertWithCustomAttributesFallback(
+      rows,
+      (chunk) => db.insert(invoices).values(chunk),
+      (chunk) => db.insert(invoices).values(chunk)
+    );
 
     // Derive customer payment behaviour from paid invoices.
     const byCustomer = new Map<string, { name: string; lateDays: number[] }>();
@@ -194,8 +288,13 @@ export async function normalizeCompany(companyId: string) {
       dueAt: d.due_at,
       paidAt: d.paid_at && d.paid_at.trim() !== "" ? d.paid_at : null,
       status: d.paid_at && d.paid_at.trim() !== "" ? "paid" : "unpaid",
+      customAttributes: customAttributes(d, PAYABLE_STANDARD_COLUMNS),
     }));
-    await insertInChunks(rows, (chunk) => db.insert(payables).values(chunk));
+    await insertWithCustomAttributesFallback(
+      rows,
+      (chunk) => db.insert(payables).values(chunk),
+      (chunk) => db.insert(payables).values(chunk)
+    );
 
     const vendorRows = [...new Map(payableRows.map((d) => [d.vendor_id, d.vendor_name ?? d.vendor_id])).entries()].map(
       ([id, name]) => ({ id, companyId, name })
@@ -212,5 +311,7 @@ export async function normalizeCompany(companyId: string) {
     customers: new Set(invoiceRows.map((d) => d.customer_id)).size,
     payables: payableRows.length,
     vendors: new Set(payableRows.map((d) => d.vendor_id)).size,
+    columnsByType,
+    customColumnsByType,
   };
 }

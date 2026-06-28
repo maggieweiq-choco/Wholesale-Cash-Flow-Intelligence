@@ -18,6 +18,9 @@ interface InventoryRow {
   qtyOnHand: number;
   qtyWip?: number;
   vendorName?: string | null;
+  vendorLeadTimeDays?: number;
+  returnRatePct?: string | null;
+  obsoleteRisk?: string | null;
 }
 
 interface SalesRow {

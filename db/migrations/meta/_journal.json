@@ -22,6 +22,20 @@
       "when": 1782625500000,
       "tag": "0002_wip_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782720000000,
+      "tag": "0003_inventory_risk_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782806400000,
+      "tag": "0004_custom_attributes",
+      "breakpoints": true
     }
   ]
 }

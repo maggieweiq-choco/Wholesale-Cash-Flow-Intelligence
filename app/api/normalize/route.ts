@@ -10,6 +10,12 @@ export async function POST() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const counts = await normalizeCompany(companyId);
-  return NextResponse.json({ ok: true, counts });
+  try {
+    const counts = await normalizeCompany(companyId);
+    return NextResponse.json({ ok: true, counts });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Normalize failed";
+    console.error("Normalize failed", error);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

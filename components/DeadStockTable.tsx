@@ -13,8 +13,17 @@ export function DeadStockTable({ items }: { items: DeadStockItemWithValue[] }) {
           <th className="py-2 pr-4">Tier</th>
           <th className="py-2 pr-4">On Hand</th>
           <th className="py-2 pr-4">WIP</th>
+          <th className="py-2 pr-4 cursor-help" title="Gross margin is derived from sales revenue minus estimated COGS from unit cost.">
+            Gross Margin
+          </th>
           <th className="py-2 pr-4 cursor-help" title="Days of Supply = qty on hand ÷ this SKU's own average daily sales. How many days the current stock would last at the recent selling pace.">
             Days of Supply
+          </th>
+          <th className="py-2 pr-4 cursor-help" title="Supplier lead time from the inventory master data. Used later for stockout-risk decisions.">
+            Lead Time
+          </th>
+          <th className="py-2 pr-4 cursor-help" title="Return rate and obsolete risk from inventory master data. Used later for markdown and buying-risk decisions.">
+            Risk
           </th>
           <th className="py-2 pr-4">On-hand Value</th>
           <th className="py-2 pr-4">Suggested Discount</th>
@@ -30,7 +39,12 @@ export function DeadStockTable({ items }: { items: DeadStockItemWithValue[] }) {
             </td>
             <td className="py-3 pr-4 text-slate-600">{item.totalSupplyQty - item.wipQty}</td>
             <td className="py-3 pr-4 text-slate-600">{item.wipQty}</td>
+            <td className="py-3 pr-4 text-slate-600">{formatPct(item.grossMarginPct)}</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
+            <td className="py-3 pr-4 text-slate-600">{item.vendorLeadTimeDays ?? 14}d</td>
+            <td className="py-3 pr-4 text-slate-600">
+              {formatPct(item.returnRatePct)} · {item.obsoleteRisk ?? "low"}
+            </td>
             <td className="py-3 pr-4 text-slate-600">${item.inventoryValue.toLocaleString()}</td>
             <td className="py-3 pr-4">
               <DiscountBadge pct={item.suggestedDiscountPct} />
@@ -44,6 +58,11 @@ export function DeadStockTable({ items }: { items: DeadStockItemWithValue[] }) {
       </tbody>
     </table>
   );
+}
+
+function formatPct(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${Math.round(value * 10) / 10}%`;
 }
 
 export function TierBadge({ tier }: { tier: "A" | "B" | "C" | "D" }) {
