@@ -25,6 +25,7 @@ export const inventory = pgTable("inventory", {
   companyId: text("company_id").notNull(),
   sku: text("sku").notNull(),
   qtyOnHand: integer("qty_on_hand").notNull(),
+  qtyWip: integer("qty_wip").notNull().default(0),
   unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
   vendorName: text("vendor_name"),
   vendorCountry: text("vendor_country"),

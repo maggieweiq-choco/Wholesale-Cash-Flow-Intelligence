@@ -14,7 +14,7 @@ import type { RawUploadRow } from "@/db/dynamo";
 
 // Expected CSV columns (the seed files in /seed match these):
 //   sales.csv:     sku, sold_qty, revenue, sold_at(YYYY-MM-DD), customer_id(optional)
-//   inventory.csv: sku, qty_on_hand, unit_cost, vendor_name(optional), vendor_country(optional)
+//   inventory.csv: sku, qty_on_hand, qty_wip(optional), unit_cost, vendor_name(optional), vendor_country(optional)
 //   invoices.csv:  customer_id, customer_name, amount, issued_at, due_at, paid_at(optional)
 //   payables.csv:  vendor_id, vendor_name, amount, issued_at, due_at, paid_at(optional)
 
@@ -105,6 +105,7 @@ export async function normalizeCompany(companyId: string) {
       companyId,
       sku: d.sku,
       qtyOnHand: Number(d.qty_on_hand ?? 0),
+      qtyWip: Number(d.qty_wip ?? 0),
       unitCost: String(d.unit_cost ?? "0"),
       vendorName: d.vendor_name && d.vendor_name.trim() !== "" ? d.vendor_name : null,
       vendorCountry: d.vendor_country && d.vendor_country.trim() !== "" ? d.vendor_country : null,

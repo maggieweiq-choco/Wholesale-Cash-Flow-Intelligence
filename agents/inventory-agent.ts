@@ -16,6 +16,7 @@ interface InventoryRow {
   id?: number;
   sku: string;
   qtyOnHand: number;
+  qtyWip?: number;
   vendorName?: string | null;
 }
 

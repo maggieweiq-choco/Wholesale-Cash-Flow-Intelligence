@@ -9,6 +9,8 @@ import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/
 import { InventoryTierSummary } from "@/components/InventoryTierSummary";
 import { DiscountDistributionChart } from "@/components/DiscountDistributionChart";
 import { TierFilterButtons } from "@/components/TierFilterButtons";
+import { InventorySupplyChart } from "@/components/InventorySupplyChart";
+import { InventoryVendorRiskNotes } from "@/components/InventoryVendorRiskNotes";
 import type { SkuTier } from "@/lib/sku-tiers";
 import { ReceivablesPriorityBoard } from "@/components/ReceivablesPriorityBoard";
 import { PayablesTable } from "@/components/PayablesTable";
@@ -374,6 +376,12 @@ function CashFlowSection() {
 
 interface InventoryMetrics {
   totalInventoryValue: number;
+  totalOnHandUnits: number;
+  totalWipUnits: number;
+  totalWipValue: number;
+  totalSupplyUnits: number;
+  totalSupplyValue: number;
+  wipShareOfSupplyValue: number;
   avgDailyCogs: number;
   daysOfInventoryOutstanding: number | null;
 }
@@ -393,6 +401,7 @@ function InventorySection({
   const [error, setError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [supplyView, setSupplyView] = useState<"tier" | "vendor">("tier");
 
   async function load() {
     setLoading(true);
@@ -434,7 +443,7 @@ function InventorySection({
     <SectionShell
       id="inventory"
       title="Dead Stock"
-      description="SKUs ranked by days of supply, with a suggested liquidation discount, reorder/JIT guidance, and vendor-negotiation tips."
+      description="ERP-style inventory review across on-hand stock, working-in-progress, days of supply, and liquidation/reorder actions."
       action={
         <button
           type="button"
@@ -452,22 +461,64 @@ function InventorySection({
         <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">{aiNotice}</div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard
           label="Days of Inventory Outstanding"
           value={metrics?.daysOfInventoryOutstanding != null ? `${metrics.daysOfInventoryOutstanding.toFixed(0)}d` : "—"}
         />
         <KpiCard
-          label="Total Inventory Value"
+          label="On-hand Inventory Value"
           value={metrics ? `$${metrics.totalInventoryValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
+        />
+        <KpiCard
+          label="WIP Units"
+          value={metrics ? metrics.totalWipUnits.toLocaleString() : "—"}
+        />
+        <KpiCard
+          label="WIP Value"
+          value={metrics ? `$${metrics.totalWipValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
+        />
+        <KpiCard
+          label="WIP Share of Supply"
+          value={metrics ? `${Math.round(metrics.wipShareOfSupplyValue * 100)}%` : "—"}
         />
         <KpiCard
           label="Avg Daily COGS"
           value={metrics ? `$${metrics.avgDailyCogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
         />
+        <KpiCard
+          label="Total Supply Units"
+          value={metrics ? metrics.totalSupplyUnits.toLocaleString() : "—"}
+        />
       </div>
 
       <InventoryTierSummary items={items} />
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">On Hand vs WIP</h3>
+            <p className="text-xs text-slate-400">Stacked inventory value split between available stock and unfinished supply.</p>
+          </div>
+          <div className="flex rounded-md border border-slate-300 p-0.5">
+            {(["tier", "vendor"] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                onClick={() => setSupplyView(view)}
+                className={`rounded px-3 py-1 text-xs font-medium ${
+                  supplyView === view ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {view === "tier" ? "By Tier" : "By Vendor"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventorySupplyChart items={items} dimension={supplyView} />}
+      </div>
+
+      {supplyView === "vendor" && !loading && <InventoryVendorRiskNotes items={items} />}
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="mb-1 text-sm font-semibold text-slate-900">Inventory Value × Days of Supply</h3>

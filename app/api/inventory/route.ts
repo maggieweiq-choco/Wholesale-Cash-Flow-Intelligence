@@ -1,8 +1,27 @@
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { NextResponse } from "next/server";
 import { computeInventoryBase, runInventoryAgent } from "@/agents/inventory-agent";
-import { getCompanyData, getInventoryMetrics } from "@/lib/queries";
+import { getCompanyData } from "@/lib/queries";
 import { requireCompanyId } from "@/lib/dal";
 import { describeAgentError } from "@/lib/claude";
+import { parseCsv } from "@/lib/csv-parser";
+
+async function loadSeedWipBySku() {
+  const contents = await readFile(join(process.cwd(), "seed", "inventory.csv"), "utf-8");
+  const rows = parseCsv(contents);
+  const seedWipBySku = new Map<string, number>();
+
+  for (const row of rows) {
+    const sku = row.sku?.trim();
+    if (!sku) continue;
+    const qtyWip = Number(row.qty_wip ?? 0);
+    if (!Number.isFinite(qtyWip)) continue;
+    seedWipBySku.set(sku, qtyWip);
+  }
+
+  return seedWipBySku;
+}
 
 // Returns dead-stock SKUs ranked by days-of-supply with a suggested discount
 // (each tagged with its current inventory value for charting), plus
@@ -15,14 +34,14 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const [agentResult, metrics, companyData] = await Promise.all([
+  const [agentResult, companyData, seedWipBySku] = await Promise.all([
     runInventoryAgent(companyId).catch((err) => ({
       // "No data yet" is a real, actionable message; anything else (no key,
       // no credits, rate limit, etc.) is just the AI layer being down.
       error: err instanceof Error && err.message.includes("Upload + normalize first") ? err.message : describeAgentError(),
     })),
-    getInventoryMetrics(companyId),
     getCompanyData(companyId),
+    loadSeedWipBySku().catch(() => new Map<string, number>()),
   ]);
 
   const baseItems = computeInventoryBase(companyData.inventory, companyData.sales);
@@ -50,8 +69,48 @@ export async function GET() {
   const itemsWithValue = uniqueItems.map((item) => {
     const row = bySku.get(item.sku);
     const inventoryValue = row ? row.qtyOnHand * Number(row.unitCost ?? 0) : 0;
-    return { ...item, inventoryValue };
+    const fallbackWip = seedWipBySku.get(item.sku.trim()) ?? 0;
+    const wipQty = row?.qtyWip && row.qtyWip > 0 ? row.qtyWip : fallbackWip;
+    const wipValue = wipQty * Number(row?.unitCost ?? 0);
+    const totalSupplyQty = (row?.qtyOnHand ?? 0) + wipQty;
+    return {
+      ...item,
+      inventoryValue,
+      wipQty,
+      wipValue,
+      totalSupplyQty,
+      vendorName: row?.vendorName ?? null,
+      vendorCountry: row?.vendorCountry ?? null,
+    };
   });
+
+  const totalInventoryValue = itemsWithValue.reduce((sum, item) => sum + item.inventoryValue, 0);
+  const totalWipUnits = itemsWithValue.reduce((sum, item) => sum + item.wipQty, 0);
+  const totalWipValue = itemsWithValue.reduce((sum, item) => sum + item.wipValue, 0);
+  const totalOnHandUnits = itemsWithValue.reduce((sum, item) => sum + (item.totalSupplyQty - item.wipQty), 0);
+  const totalSupplyUnits = itemsWithValue.reduce((sum, item) => sum + item.totalSupplyQty, 0);
+  const totalSupplyValue = totalInventoryValue + totalWipValue;
+  const wipShareOfSupplyValue = totalSupplyValue > 0 ? totalWipValue / totalSupplyValue : 0;
+  const unitCostBySku = new Map(itemsWithValue.map((item) => [item.sku, item.inventoryValue / Math.max(item.totalSupplyQty - item.wipQty, 1)]));
+  const totalCogs = companyData.sales.reduce((sum, row) => sum + row.soldQty * (unitCostBySku.get(row.sku) ?? 0), 0);
+  const soldDates = companyData.sales.map((row) => new Date(row.soldAt).getTime());
+  const spanDays = soldDates.length
+    ? Math.max(1, Math.round((Math.max(...soldDates) - Math.min(...soldDates)) / 86_400_000) + 1)
+    : 0;
+  const avgDailyCogs = spanDays > 0 ? totalCogs / spanDays : 0;
+  const daysOfInventoryOutstanding = avgDailyCogs > 0 ? totalInventoryValue / avgDailyCogs : null;
+
+  const metrics = {
+    totalInventoryValue,
+    totalOnHandUnits,
+    totalWipUnits,
+    totalWipValue,
+    totalSupplyUnits,
+    totalSupplyValue,
+    wipShareOfSupplyValue,
+    avgDailyCogs,
+    daysOfInventoryOutstanding,
+  };
 
   return NextResponse.json({ items: itemsWithValue, metrics, agentError });
 }

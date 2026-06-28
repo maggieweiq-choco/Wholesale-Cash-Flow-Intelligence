@@ -14,7 +14,14 @@ import {
 } from "recharts";
 import type { DeadStockItem } from "@/agents/inventory-agent";
 
-export type DeadStockItemWithValue = DeadStockItem & { inventoryValue: number };
+export type DeadStockItemWithValue = DeadStockItem & {
+  inventoryValue: number;
+  wipQty: number;
+  wipValue: number;
+  totalSupplyQty: number;
+  vendorName?: string | null;
+  vendorCountry?: string | null;
+};
 
 const QUADRANTS = [
   { label: "High Value · High Days → Reposition / Liquidate", dot: "bg-red-500" },
@@ -76,7 +83,8 @@ export function InventoryBubbleChart({ items }: { items: DeadStockItemWithValue[
                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm">
                   <p className="font-semibold text-slate-900">{item.sku}</p>
                   <p className="text-slate-500">Days of supply: {item.daysOfSupply}</p>
-                  <p className="text-slate-500">Value: ${item.inventoryValue.toLocaleString()}</p>
+                  <p className="text-slate-500">On-hand value: ${item.inventoryValue.toLocaleString()}</p>
+                  <p className="text-slate-500">WIP: {item.wipQty} units · ${item.wipValue.toLocaleString()}</p>
                   <p className="text-slate-500">Discount: {item.suggestedDiscountPct}%</p>
                 </div>
               );
