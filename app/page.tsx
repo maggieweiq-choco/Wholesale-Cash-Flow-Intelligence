@@ -199,6 +199,26 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
   const [openingCash, setOpeningCash] = useState(50_000);
   const [simInflows, setSimInflows] = useState<{ dayOffset: number; amount: number }[]>([]);
 
+  // Manual mid-stream capital injections (e.g. a planned equity/loan draw on a
+  // future date), separate from the overdue-AR what-if simulation above.
+  const [injections, setInjections] = useState<{ date: string; amount: number }[]>([]);
+  const [injectionDate, setInjectionDate] = useState("");
+  const [injectionAmount, setInjectionAmount] = useState("");
+
+  function buildExtraInflows(
+    sim: { dayOffset: number; amount: number }[] = simInflows,
+    inj: { date: string; amount: number }[] = injections
+  ) {
+    const today = new Date().toISOString().slice(0, 10);
+    return [
+      ...sim,
+      ...inj.map((item) => ({
+        dayOffset: Math.round((new Date(item.date).getTime() - new Date(today).getTime()) / 86_400_000),
+        amount: item.amount,
+      })),
+    ];
+  }
+
   // Deterministic projection (real invoice/sales/inventory data, no LLM).
   const [projection, setProjection] = useState<ProjectionData | null>(null);
   const [projLoading, setProjLoading] = useState(false);
@@ -212,7 +232,7 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
   const [fcError, setFcError] = useState<string | null>(null);
   const [fcNotice, setFcNotice] = useState<string | null>(null);
 
-  async function loadProjection(extra = simInflows) {
+  async function loadProjection(extra = buildExtraInflows()) {
     setProjLoading(true);
     setProjError(null);
     try {
@@ -415,6 +435,74 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
           </div>
         )}
 
+        <div className="rounded-xl border border-slate-200 p-4">
+          <p className="text-sm font-semibold text-slate-900">Capital Injections</p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Add a planned cash injection (loan draw, equity, owner deposit) on a future date to see its effect on the runway.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!injectionDate || !injectionAmount || Number(injectionAmount) <= 0) return;
+              const next = [...injections, { date: injectionDate, amount: Number(injectionAmount) }];
+              setInjections(next);
+              setInjectionDate("");
+              setInjectionAmount("");
+              void loadProjection(buildExtraInflows(simInflows, next));
+            }}
+            className="mt-3 flex flex-wrap items-end gap-2"
+          >
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-500">Date</span>
+              <input
+                type="date"
+                value={injectionDate}
+                onChange={(e) => setInjectionDate(e.target.value)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-500">Amount ($)</span>
+              <input
+                type="number"
+                value={injectionAmount}
+                onChange={(e) => setInjectionAmount(e.target.value)}
+                placeholder="e.g. 25000"
+                className="w-36 rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-slate-500 focus:outline-none"
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Add
+            </button>
+          </form>
+
+          {injections.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {injections.map((inj, idx) => (
+                <li key={`${inj.date}-${idx}`} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-1.5 text-sm">
+                  <span className="text-slate-700">
+                    {fmtMoney(inj.amount)} on <span className="font-medium">{inj.date}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = injections.filter((_, i) => i !== idx);
+                      setInjections(next);
+                      void loadProjection(buildExtraInflows(simInflows, next));
+                    }}
+                    className="text-xs font-medium text-slate-400 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {projection && projection.overdueTotal > 0 && (
           <div className={`rounded-xl border p-4 ${simInflows.length > 0 ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
             <p className={`text-sm ${simInflows.length > 0 ? "text-emerald-800" : "text-amber-800"}`}>
@@ -427,7 +515,7 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
                   onClick={() => {
                     const next = [{ dayOffset: 0, amount: projection.overdueTotal }];
                     setSimInflows(next);
-                    void loadProjection(next);
+                    void loadProjection(buildExtraInflows(next));
                   }}
                   className="rounded-md bg-amber-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-900"
                 >
@@ -440,7 +528,7 @@ function CashFlowSection({ onWorstGap }: { onWorstGap: (gap: number) => void }) 
                     type="button"
                     onClick={() => {
                       setSimInflows([]);
-                      void loadProjection([]);
+                      void loadProjection(buildExtraInflows([]));
                     }}
                     className="rounded-md border border-emerald-300 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
                   >
