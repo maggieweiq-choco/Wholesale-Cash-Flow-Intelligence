@@ -7,6 +7,8 @@ import { RiskAlerts, type RiskAlert } from "@/components/RiskAlerts";
 import { DeadStockTable } from "@/components/DeadStockTable";
 import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/InventoryBubbleChart";
 import { InventoryTierSummary } from "@/components/InventoryTierSummary";
+import { DiscountDistributionChart } from "@/components/DiscountDistributionChart";
+import type { SkuTier } from "@/lib/sku-tiers";
 import { ReceivablesTable } from "@/components/ReceivablesTable";
 import { PayablesTable } from "@/components/PayablesTable";
 import { PurchasingTable } from "@/components/PurchasingTable";
@@ -369,7 +371,7 @@ interface InventoryMetrics {
   daysOfInventoryOutstanding: number | null;
 }
 
-const PREVIEW_ROWS = 20;
+const PREVIEW_ROWS = 10;
 
 function InventorySection() {
   const [items, setItems] = useState<DeadStockItemWithValue[]>([]);
@@ -378,6 +380,8 @@ function InventorySection() {
   const [error, setError] = useState<string | null>(null);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [tierFilter, setTierFilter] = useState<SkuTier | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "Stock" | "Reorder">("all");
 
   async function load() {
     setLoading(true);
@@ -404,7 +408,12 @@ function InventorySection() {
     load();
   }, []);
 
-  const filtered = items.filter((item) => item.sku.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter(
+    (item) =>
+      item.sku.toLowerCase().includes(search.toLowerCase()) &&
+      (tierFilter === "all" || item.tier === tierFilter) &&
+      (typeFilter === "all" || item.productType === typeFilter)
+  );
   const preview = filtered.slice(0, PREVIEW_ROWS);
 
   return (
@@ -452,13 +461,49 @@ function InventorySection() {
         {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventoryBubbleChart items={items} />}
       </div>
 
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="mb-1 text-sm font-semibold text-slate-900">SKUs by Discount Tier</h3>
+        <p className="mb-2 text-xs text-slate-400">How many SKUs sit at each discount level</p>
+        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <DiscountDistributionChart items={items} />}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search SKU…"
-          className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search SKU…"
+            className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+          <div className="flex rounded-md border border-slate-300 p-0.5">
+            {(["all", "A", "B", "C", "D"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTierFilter(t)}
+                className={`rounded px-3 py-1 text-xs font-medium ${
+                  tierFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {t === "all" ? "All Tiers" : `Tier ${t}`}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-md border border-slate-300 p-0.5">
+            {(["all", "Stock", "Reorder"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTypeFilter(t)}
+                className={`rounded px-3 py-1 text-xs font-medium ${
+                  typeFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {t === "all" ? "All Types" : t}
+              </button>
+            ))}
+          </div>
+        </div>
         <Link href="/inventory/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
           View full list & export ({items.length} SKUs) →
         </Link>
@@ -487,6 +532,7 @@ function PurchasingSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [tierFilter, setTierFilter] = useState<SkuTier | "all">("all");
 
   async function load() {
     setLoading(true);
@@ -509,7 +555,9 @@ function PurchasingSection() {
     load();
   }, []);
 
-  const filtered = items.filter((item) => item.sku.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter(
+    (item) => item.sku.toLowerCase().includes(search.toLowerCase()) && (tierFilter === "all" || item.tier === tierFilter)
+  );
   const preview = filtered.slice(0, PREVIEW_ROWS);
 
   return (
@@ -534,12 +582,28 @@ function PurchasingSection() {
       <PurchasingTierSummary items={items} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search SKU…"
-          className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search SKU…"
+            className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+          <div className="flex rounded-md border border-slate-300 p-0.5">
+            {(["all", "A", "B", "C", "D"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTierFilter(t)}
+                className={`rounded px-3 py-1 text-xs font-medium ${
+                  tierFilter === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {t === "all" ? "All Tiers" : `Tier ${t}`}
+              </button>
+            ))}
+          </div>
+        </div>
         <Link href="/purchasing/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
           View full list & export ({items.length} SKUs) →
         </Link>
