@@ -33,13 +33,10 @@ interface SalesRow {
 
 const TARGET_DAYS_OF_SUPPLY = 30;
 
-// Reorder priority follows the same fixed sales-velocity tier as the dead-
-// stock discount (lib/sku-tiers.ts), not free-form AI judgment: best
-// sellers (tier A) get reordered aggressively, the bottom decile (tier D)
-// never gets reordered even if it's running low — buying more of something
-// that doesn't sell just ties up more cash. Days-of-supply/qty/cost are
-// computed straight from Aurora data with plain arithmetic; this is what
-// renders even when Claude is unavailable.
+// Reorder priority follows the same fixed composite tier as the dead-stock
+// discount (lib/sku-tiers.ts), not free-form AI judgment. Tier D is treated
+// conservatively even if stock is low, because buying more high-risk inventory
+// can tie up more cash. Days-of-supply/qty/cost are computed from Aurora data.
 export function computePurchasingBase(inventoryRows: InventoryRow[], sales: SalesRow[]): PurchasingItem[] {
   const inventory = dedupeBySku(inventoryRows);
   const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
@@ -52,7 +49,7 @@ export function computePurchasingBase(inventoryRows: InventoryRow[], sales: Sale
     bySku.set(s.sku, entry);
   }
 
-  const tiers = tierSkusBySalesVelocity(inventory.map((i) => i.sku), sales);
+  const tiers = tierSkusBySalesVelocity(inventory, sales);
 
   return inventory
     .map((inv) => {

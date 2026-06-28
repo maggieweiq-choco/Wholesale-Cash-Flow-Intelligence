@@ -11,8 +11,8 @@ const TIER_TONE: Record<SkuTier, string> = {
 };
 
 // Answers "how much markdown $ does it take to keep cash moving" at a
-// glance: per sales-velocity tier, how many SKUs, how much inventory value,
-// and — applying that tier's fixed discount — how much markdown that implies.
+// glance: per composite tier, how many SKUs, how much inventory value, and
+// applying that tier's fixed discount, how much markdown that implies.
 export function InventoryTierSummary({ items }: { items: DeadStockItemWithValue[] }) {
   const byTier = new Map<SkuTier, { count: number; value: number }>();
   for (const item of items) {

@@ -16,6 +16,7 @@ interface InventoryRow {
   id?: number;
   sku: string;
   qtyOnHand: number;
+  unitCost?: string | null;
   qtyWip?: number;
   vendorName?: string | null;
   vendorLeadTimeDays?: number;
@@ -30,12 +31,10 @@ interface SalesRow {
   customerId?: string | null;
 }
 
-// Discount and reorder priority both follow one fixed, auditable rule — a
-// SKU's sales-velocity tier (lib/sku-tiers.ts) — rather than free-form AI
-// judgment. Days-of-supply is computed straight from Aurora data with plain
-// arithmetic; this is what renders even when Claude is unavailable. Claude
-// only adds judgment-based copy (reorderRecommendation/vendorNegotiationTip)
-// on top — it never changes the discount number or the tier.
+// Discount and reorder priority both follow one fixed, auditable composite
+// tier rule (lib/sku-tiers.ts), rather than free-form AI judgment. Days-of-
+// supply is computed straight from Aurora data; Claude only adds copy on top
+// and never changes the discount number or the tier.
 export function computeInventoryBase(inventoryRows: InventoryRow[], sales: SalesRow[]): DeadStockItem[] {
   const inventory = dedupeBySku(inventoryRows);
   const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
@@ -48,7 +47,7 @@ export function computeInventoryBase(inventoryRows: InventoryRow[], sales: Sales
     bySku.set(s.sku, entry);
   }
 
-  const tiers = tierSkusBySalesVelocity(inventory.map((i) => i.sku), sales);
+  const tiers = tierSkusBySalesVelocity(inventory, sales);
 
   return inventory.map((inv) => {
     const sale = bySku.get(inv.sku);

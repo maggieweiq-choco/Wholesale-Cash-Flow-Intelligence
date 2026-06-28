@@ -11,8 +11,8 @@ const TIER_TONE: Record<SkuTier, string> = {
 };
 
 // Answers "how much cash does reordering this tier take" at a glance: per
-// sales-velocity tier, how many SKUs need reordering, the total estimated
-// cost, and how many are urgent.
+// composite tier, how many SKUs need reordering, the total estimated cost,
+// and how many are urgent.
 export function PurchasingTierSummary({ items }: { items: PurchasingItem[] }) {
   const byTier = new Map<SkuTier, { count: number; cost: number; urgent: number }>();
   for (const item of items) {

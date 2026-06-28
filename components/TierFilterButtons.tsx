@@ -25,6 +25,7 @@ export function TierFilterButtons({
       <button
         type="button"
         onClick={() => onChange(new Set())}
+        title="Tiers are based on a composite score: sales velocity, margin, days of supply, cash tied up, return/obsolete risk, stockout risk, and vendor lead time."
         className={`rounded px-3 py-1 text-xs font-medium ${
           selected.size === 0 ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
         }`}
@@ -36,6 +37,7 @@ export function TierFilterButtons({
           key={t}
           type="button"
           onClick={() => toggle(t)}
+          title="Composite tier based on sales velocity, margin, supply, inventory value, return/obsolete risk, stockout risk, and vendor lead time."
           className={`rounded px-3 py-1 text-xs font-medium ${
             selected.has(t) ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
           }`}
