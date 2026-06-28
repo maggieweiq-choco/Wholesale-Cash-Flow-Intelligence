@@ -1,11 +1,13 @@
 import { claude, CLAUDE_MODEL } from "@/lib/claude";
 import { getCompanyData } from "@/lib/queries";
 import { purchasingRecommendationTool } from "./tools";
+import { tierSkusBySalesVelocity, type SkuTier } from "@/lib/sku-tiers";
 
 export interface PurchasingItem {
   sku: string;
   vendorName?: string;
   daysOfSupply: number;
+  tier: SkuTier;
   recommendedQty: number;
   estimatedCost: number;
   urgency: "reorder_now" | "reorder_soon" | "healthy";
@@ -26,11 +28,13 @@ interface SalesRow {
 
 const TARGET_DAYS_OF_SUPPLY = 30;
 
-// Deterministic days-of-supply + a reorder-point quantity (enough stock for
-// TARGET_DAYS_OF_SUPPLY), computed straight from Aurora data with plain
-// arithmetic. This is what renders even when Claude is unavailable — the AI
-// call below only adds judgment on top, it never invents the underlying
-// numbers.
+// Reorder priority follows the same fixed sales-velocity tier as the dead-
+// stock discount (lib/sku-tiers.ts), not free-form AI judgment: best
+// sellers (tier A) get reordered aggressively, the bottom decile (tier D)
+// never gets reordered even if it's running low — buying more of something
+// that doesn't sell just ties up more cash. Days-of-supply/qty/cost are
+// computed straight from Aurora data with plain arithmetic; this is what
+// renders even when Claude is unavailable.
 export function computePurchasingBase(inventory: InventoryRow[], sales: SalesRow[]): PurchasingItem[] {
   const bySku = new Map<string, { totalQty: number; minDate: number; maxDate: number }>();
   for (const s of sales) {
@@ -42,24 +46,34 @@ export function computePurchasingBase(inventory: InventoryRow[], sales: SalesRow
     bySku.set(s.sku, entry);
   }
 
+  const tiers = tierSkusBySalesVelocity(inventory.map((i) => i.sku), sales);
+
   return inventory
     .map((inv) => {
       const sale = bySku.get(inv.sku);
       const spanDays = sale ? Math.max(1, Math.round((sale.maxDate - sale.minDate) / 86_400_000) + 1) : 0;
       const avgDailyVelocity = sale && spanDays > 0 ? sale.totalQty / spanDays : 0;
       const daysOfSupply = avgDailyVelocity > 0 ? Math.round(inv.qtyOnHand / avgDailyVelocity) : 999;
+      const tier = tiers.get(inv.sku) ?? "D";
 
-      const targetQty = Math.round(avgDailyVelocity * TARGET_DAYS_OF_SUPPLY);
+      const doNotReorder = tier === "D";
+      const targetQty = doNotReorder ? 0 : Math.round(avgDailyVelocity * TARGET_DAYS_OF_SUPPLY);
       const recommendedQty = Math.max(0, targetQty - inv.qtyOnHand);
       const estimatedCost = Math.round(recommendedQty * Number(inv.unitCost ?? 0) * 100) / 100;
 
-      const urgency: PurchasingItem["urgency"] =
-        daysOfSupply <= 14 ? "reorder_now" : daysOfSupply <= 30 ? "reorder_soon" : "healthy";
+      const urgency: PurchasingItem["urgency"] = doNotReorder
+        ? "healthy"
+        : daysOfSupply <= 14
+        ? "reorder_now"
+        : daysOfSupply <= 30
+        ? "reorder_soon"
+        : "healthy";
 
       return {
         sku: inv.sku,
         vendorName: inv.vendorName ?? undefined,
         daysOfSupply,
+        tier,
         recommendedQty,
         estimatedCost,
         urgency,
@@ -69,9 +83,10 @@ export function computePurchasingBase(inventory: InventoryRow[], sales: SalesRow
     .sort((a, b) => a.daysOfSupply - b.daysOfSupply);
 }
 
-// Recommends which SKUs to reorder, how much, and the estimated cost, based
-// on real sales velocity vs. inventory on hand — grounded in real Aurora
-// data, naming the actual supplier from the inventory row when known.
+// Adds Claude-written context on top of the deterministic base
+// recommendations, grounded in real Aurora data, naming the actual
+// supplier from the inventory row when known. Tier/urgency/qty are never
+// touched here — see computePurchasingBase.
 export async function runPurchasingAgent(companyId: string): Promise<PurchasingItem[]> {
   const { sales, inventory } = await getCompanyData(companyId);
 

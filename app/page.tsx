@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CashflowChart } from "@/components/CashflowChart";
 import { RiskAlerts, type RiskAlert } from "@/components/RiskAlerts";
 import { DeadStockTable } from "@/components/DeadStockTable";
 import { InventoryBubbleChart, type DeadStockItemWithValue } from "@/components/InventoryBubbleChart";
+import { InventoryTierSummary } from "@/components/InventoryTierSummary";
 import { ReceivablesTable } from "@/components/ReceivablesTable";
 import { PayablesTable } from "@/components/PayablesTable";
 import { PurchasingTable } from "@/components/PurchasingTable";
+import { PurchasingTierSummary } from "@/components/PurchasingTierSummary";
 import { FinancingPanel } from "@/components/FinancingPanel";
 import type { CashflowDay } from "@/agents/cashflow-agent";
 import type { CollectionsItem } from "@/agents/receivables-agent";
@@ -366,11 +369,14 @@ interface InventoryMetrics {
   daysOfInventoryOutstanding: number | null;
 }
 
+const PREVIEW_ROWS = 20;
+
 function InventorySection() {
   const [items, setItems] = useState<DeadStockItemWithValue[]>([]);
   const [metrics, setMetrics] = useState<InventoryMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -395,6 +401,9 @@ function InventorySection() {
   useEffect(() => {
     load();
   }, []);
+
+  const filtered = items.filter((item) => item.sku.toLowerCase().includes(search.toLowerCase()));
+  const preview = filtered.slice(0, PREVIEW_ROWS);
 
   return (
     <SectionShell
@@ -430,17 +439,38 @@ function InventorySection() {
         />
       </div>
 
+      <InventoryTierSummary items={items} />
+
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="mb-1 text-sm font-semibold text-slate-900">库存金额 × 库龄</h3>
+        <h3 className="mb-1 text-sm font-semibold text-slate-900">Inventory Value × Days of Supply</h3>
         <p className="mb-2 text-xs text-slate-400">Bubble size = suggested liquidation discount</p>
         {loading ? <p className="text-sm text-slate-400">Loading…</p> : <InventoryBubbleChart items={items} />}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search SKU…"
+          className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        />
+        <Link href="/inventory/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
+          View full list & export ({items.length} SKUs) →
+        </Link>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         {loading ? (
           <p className="text-sm text-slate-400">Loading…</p>
         ) : (
-          <DeadStockTable items={items} />
+          <>
+            <DeadStockTable items={preview} />
+            {filtered.length > PREVIEW_ROWS && (
+              <p className="mt-3 text-center text-xs text-slate-400">
+                Showing {PREVIEW_ROWS} of {filtered.length} — see full list for the rest.
+              </p>
+            )}
+          </>
         )}
       </div>
     </SectionShell>
@@ -451,6 +481,7 @@ function PurchasingSection() {
   const [items, setItems] = useState<PurchasingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   async function load() {
     setLoading(true);
@@ -461,7 +492,6 @@ function PurchasingSection() {
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) throw new Error(data.error ?? "Failed to load purchasing recommendations");
       setItems(data.items ?? []);
-      setError(data.agentError ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load purchasing recommendations");
       setItems([]);
@@ -473,6 +503,9 @@ function PurchasingSection() {
   useEffect(() => {
     load();
   }, []);
+
+  const filtered = items.filter((item) => item.sku.toLowerCase().includes(search.toLowerCase()));
+  const preview = filtered.slice(0, PREVIEW_ROWS);
 
   return (
     <SectionShell
@@ -493,8 +526,33 @@ function PurchasingSection() {
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <PurchasingTierSummary items={items} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search SKU…"
+          className="w-56 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+        />
+        <Link href="/purchasing/details" className="text-sm font-medium text-slate-900 underline underline-offset-2">
+          View full list & export ({items.length} SKUs) →
+        </Link>
+      </div>
+
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        {loading ? <p className="text-sm text-slate-400">Loading…</p> : <PurchasingTable items={items} />}
+        {loading ? (
+          <p className="text-sm text-slate-400">Loading…</p>
+        ) : (
+          <>
+            <PurchasingTable items={preview} />
+            {filtered.length > PREVIEW_ROWS && (
+              <p className="mt-3 text-center text-xs text-slate-400">
+                Showing {PREVIEW_ROWS} of {filtered.length} — see full list for the rest.
+              </p>
+            )}
+          </>
+        )}
       </div>
     </SectionShell>
   );

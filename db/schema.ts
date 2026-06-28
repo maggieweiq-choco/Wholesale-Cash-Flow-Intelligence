@@ -14,6 +14,7 @@ export const skuSalesHistory = pgTable("sku_sales_history", {
   id: serial("id").primaryKey(),
   companyId: text("company_id").notNull(),
   sku: text("sku").notNull(),
+  customerId: text("customer_id"), // nullable: older uploads may not have it
   soldQty: integer("sold_qty").notNull(),
   revenue: numeric("revenue", { precision: 12, scale: 2 }),
   soldAt: date("sold_at").notNull(),

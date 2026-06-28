@@ -1,4 +1,5 @@
 import type { PurchasingItem } from "@/agents/purchasing-agent";
+import { TierBadge } from "@/components/DeadStockTable";
 
 export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
   if (items.length === 0) {
@@ -10,6 +11,7 @@ export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
       <thead>
         <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
           <th className="py-2 pr-4">SKU</th>
+          <th className="py-2 pr-4">Tier</th>
           <th className="py-2 pr-4">Vendor</th>
           <th className="py-2 pr-4">Days of Supply</th>
           <th className="py-2 pr-4">Recommended Qty</th>
@@ -21,6 +23,9 @@ export function PurchasingTable({ items }: { items: PurchasingItem[] }) {
         {items.map((item) => (
           <tr key={item.sku} className="border-b border-slate-100 last:border-0">
             <td className="py-3 pr-4 font-medium text-slate-900">{item.sku}</td>
+            <td className="py-3 pr-4">
+              <TierBadge tier={item.tier} />
+            </td>
             <td className="py-3 pr-4 text-slate-600">{item.vendorName ?? "—"}</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
             <td className="py-3 pr-4 text-slate-600">{item.recommendedQty.toLocaleString()}</td>

@@ -10,6 +10,8 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
       <thead>
         <tr className="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
           <th className="py-2 pr-4">SKU</th>
+          <th className="py-2 pr-4">Tier</th>
+          <th className="py-2 pr-4">Type</th>
           <th className="py-2 pr-4">Days of Supply</th>
           <th className="py-2 pr-4">Suggested Discount</th>
           <th className="py-2">Recommendations</th>
@@ -19,6 +21,10 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
         {items.map((item) => (
           <tr key={item.sku} className="border-b border-slate-100 last:border-0">
             <td className="py-3 pr-4 font-medium text-slate-900">{item.sku}</td>
+            <td className="py-3 pr-4">
+              <TierBadge tier={item.tier} />
+            </td>
+            <td className="py-3 pr-4 text-slate-600">{item.productType}</td>
             <td className="py-3 pr-4 text-slate-600">{item.daysOfSupply}</td>
             <td className="py-3 pr-4">
               <DiscountBadge pct={item.suggestedDiscountPct} />
@@ -32,6 +38,19 @@ export function DeadStockTable({ items }: { items: DeadStockItem[] }) {
       </tbody>
     </table>
   );
+}
+
+export function TierBadge({ tier }: { tier: "A" | "B" | "C" | "D" }) {
+  const tone =
+    tier === "A"
+      ? "bg-emerald-50 text-emerald-700"
+      : tier === "B"
+      ? "bg-slate-100 text-slate-700"
+      : tier === "C"
+      ? "bg-amber-50 text-amber-700"
+      : "bg-red-50 text-red-700";
+
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{tier}</span>;
 }
 
 function DiscountBadge({ pct }: { pct: number }) {

@@ -21,8 +21,21 @@ export async function GET() {
   ]);
 
   const baseItems = computeInventoryBase(companyData.inventory, companyData.sales);
-  const items = Array.isArray(agentResult) ? agentResult : baseItems;
+  const baseBySku = new Map(baseItems.map((item) => [item.sku, item]));
   const agentError = Array.isArray(agentResult) ? null : agentResult.error;
+
+  // Claude (when available) only contributes reorderRecommendation /
+  // vendorNegotiationTip copy — daysOfSupply, suggestedDiscountPct, tier,
+  // and productType always come from the fixed deterministic rule so the
+  // numbers shown are never AI judgment calls.
+  const items = Array.isArray(agentResult)
+    ? agentResult.map((aiItem) => {
+        const base = baseBySku.get(aiItem.sku);
+        return base
+          ? { ...base, reorderRecommendation: aiItem.reorderRecommendation, vendorNegotiationTip: aiItem.vendorNegotiationTip }
+          : aiItem;
+      })
+    : baseItems;
 
   const bySku = new Map(companyData.inventory.map((row) => [row.sku, row]));
   const itemsWithValue = items.map((item) => {
