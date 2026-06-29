@@ -5,6 +5,7 @@ import { batchPutItems } from "@/lib/dynamo";
 import { parseCsv, type UploadType } from "@/lib/csv-parser";
 import { normalizeCompany } from "@/lib/etl";
 import { requireCompanyId } from "@/lib/dal";
+import { rawRowTtl } from "@/db/dynamo";
 
 const SEED_FILES: { type: UploadType; file: string }[] = [
   { type: "sales", file: "sales.csv" },
@@ -23,6 +24,7 @@ export async function POST() {
   }
 
   const uploadedAt = new Date().toISOString();
+  const ttl = rawRowTtl(uploadedAt);
   let totalRows = 0;
 
   for (const { type, file } of SEED_FILES) {
@@ -37,6 +39,7 @@ export async function POST() {
         type,
         data,
         uploadedAt,
+        ttl,
       }))
     );
     totalRows += rows.length;

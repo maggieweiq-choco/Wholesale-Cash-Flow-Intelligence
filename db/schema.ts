@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, numeric, date, timestamp, boolean, primaryKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, date, timestamp, boolean, primaryKey, jsonb, index } from "drizzle-orm/pg-core";
 
 // 1 user = 1 company: companyId is the tenant key used across every other
 // table, generated at signup and never typed by the user.
@@ -10,44 +10,59 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-export const skuSalesHistory = pgTable("sku_sales_history", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  sku: text("sku").notNull(),
-  customerId: text("customer_id"), // nullable: older uploads may not have it
-  soldQty: integer("sold_qty").notNull(),
-  revenue: numeric("revenue", { precision: 12, scale: 2 }),
-  soldAt: date("sold_at").notNull(),
-  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
-});
+export const skuSalesHistory = pgTable(
+  "sku_sales_history",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    sku: text("sku").notNull(),
+    customerId: text("customer_id"), // nullable: older uploads may not have it
+    soldQty: integer("sold_qty").notNull(),
+    revenue: numeric("revenue", { precision: 12, scale: 2 }),
+    soldAt: date("sold_at").notNull(),
+    customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
+  },
+  // Every read goes through getCompanyData's eq(companyId, ...); sku is the
+  // join key against inventory for tiering/velocity, so it rides along as
+  // the composite index's second column rather than needing its own index.
+  (table) => [index("sku_sales_history_company_sku_idx").on(table.companyId, table.sku)]
+);
 
-export const inventory = pgTable("inventory", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  sku: text("sku").notNull(),
-  qtyOnHand: integer("qty_on_hand").notNull(),
-  qtyWip: integer("qty_wip").notNull().default(0),
-  unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
-  vendorName: text("vendor_name"),
-  vendorCountry: text("vendor_country"),
-  vendorLeadTimeDays: integer("vendor_lead_time_days").notNull().default(14),
-  returnRatePct: numeric("return_rate_pct", { precision: 5, scale: 2 }).notNull().default("0"),
-  obsoleteRisk: text("obsolete_risk").notNull().default("low"), // low / medium / high
-  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+export const inventory = pgTable(
+  "inventory",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    sku: text("sku").notNull(),
+    qtyOnHand: integer("qty_on_hand").notNull(),
+    qtyWip: integer("qty_wip").notNull().default(0),
+    unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
+    vendorName: text("vendor_name"),
+    vendorCountry: text("vendor_country"),
+    vendorLeadTimeDays: integer("vendor_lead_time_days").notNull().default(14),
+    returnRatePct: numeric("return_rate_pct", { precision: 5, scale: 2 }).notNull().default("0"),
+    obsoleteRisk: text("obsolete_risk").notNull().default("low"), // low / medium / high
+    customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("inventory_company_sku_idx").on(table.companyId, table.sku)]
+);
 
-export const invoices = pgTable("invoices", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  customerId: text("customer_id").notNull(),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  issuedAt: date("issued_at").notNull(),
-  dueAt: date("due_at").notNull(),
-  paidAt: date("paid_at"),
-  status: text("status").default("unpaid"), // unpaid / partial / paid
-  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
-});
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    customerId: text("customer_id").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    issuedAt: date("issued_at").notNull(),
+    dueAt: date("due_at").notNull(),
+    paidAt: date("paid_at"),
+    status: text("status").default("unpaid"), // unpaid / partial / paid
+    customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
+  },
+  (table) => [index("invoices_company_id_idx").on(table.companyId)]
+);
 
 export const customers = pgTable(
   "customers",
@@ -63,17 +78,21 @@ export const customers = pgTable(
   (table) => [primaryKey({ columns: [table.companyId, table.id] })]
 );
 
-export const payables = pgTable("payables", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  vendorId: text("vendor_id").notNull(),
-  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
-  issuedAt: date("issued_at").notNull(),
-  dueAt: date("due_at").notNull(),
-  paidAt: date("paid_at"),
-  status: text("status").default("unpaid"), // unpaid / partial / paid
-  customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
-});
+export const payables = pgTable(
+  "payables",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    vendorId: text("vendor_id").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    issuedAt: date("issued_at").notNull(),
+    dueAt: date("due_at").notNull(),
+    paidAt: date("paid_at"),
+    status: text("status").default("unpaid"), // unpaid / partial / paid
+    customAttributes: jsonb("custom_attributes").$type<Record<string, string>>().notNull().default({}),
+  },
+  (table) => [index("payables_company_id_idx").on(table.companyId)]
+);
 
 export const vendors = pgTable(
   "vendors",
@@ -87,25 +106,33 @@ export const vendors = pgTable(
   (table) => [primaryKey({ columns: [table.companyId, table.id] })]
 );
 
-export const cashFlowForecast = pgTable("cash_flow_forecast", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  forecastDt: date("forecast_dt").notNull(),
-  cashIn: numeric("cash_in", { precision: 12, scale: 2 }),
-  cashOut: numeric("cash_out", { precision: 12, scale: 2 }),
-  balance: numeric("balance", { precision: 12, scale: 2 }),
-  gap: numeric("gap", { precision: 12, scale: 2 }), // negative = danger
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+export const cashFlowForecast = pgTable(
+  "cash_flow_forecast",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    forecastDt: date("forecast_dt").notNull(),
+    cashIn: numeric("cash_in", { precision: 12, scale: 2 }),
+    cashOut: numeric("cash_out", { precision: 12, scale: 2 }),
+    balance: numeric("balance", { precision: 12, scale: 2 }),
+    gap: numeric("gap", { precision: 12, scale: 2 }), // negative = danger
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("cash_flow_forecast_company_id_idx").on(table.companyId)]
+);
 
-export const loanScenarios = pgTable("loan_scenarios", {
-  id: serial("id").primaryKey(),
-  companyId: text("company_id").notNull(),
-  gapAmount: numeric("gap_amount", { precision: 12, scale: 2 }),
-  optionType: text("option_type"), // bank_loan / liquidate / ar_finance
-  amount: numeric("amount", { precision: 12, scale: 2 }),
-  durationDays: integer("duration_days"),
-  estimatedCost: numeric("estimated_cost", { precision: 12, scale: 2 }),
-  recommended: boolean("recommended").default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+export const loanScenarios = pgTable(
+  "loan_scenarios",
+  {
+    id: serial("id").primaryKey(),
+    companyId: text("company_id").notNull(),
+    gapAmount: numeric("gap_amount", { precision: 12, scale: 2 }),
+    optionType: text("option_type"), // bank_loan / liquidate / ar_finance
+    amount: numeric("amount", { precision: 12, scale: 2 }),
+    durationDays: integer("duration_days"),
+    estimatedCost: numeric("estimated_cost", { precision: 12, scale: 2 }),
+    recommended: boolean("recommended").default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [index("loan_scenarios_company_id_idx").on(table.companyId)]
+);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { batchPutItems } from "@/lib/dynamo";
 import { parseCsv, type UploadType } from "@/lib/csv-parser";
 import { requireCompanyId } from "@/lib/dal";
+import { rawRowTtl } from "@/db/dynamo";
 
 // Parses an uploaded CSV (sales / inventory / invoice) and writes each row
 // to DynamoDB as-is. Cleaning/normalization happens later in /api/forecast.
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
   const rows = parseCsv(await file.text());
   const uploadId = crypto.randomUUID();
   const uploadedAt = new Date().toISOString();
+  const ttl = rawRowTtl(uploadedAt);
 
   await batchPutItems(
     rows.map((data, rowIndex) => ({
@@ -30,6 +32,7 @@ export async function POST(request: NextRequest) {
       type,
       data,
       uploadedAt,
+      ttl,
     }))
   );
 
