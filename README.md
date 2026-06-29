@@ -82,21 +82,30 @@ Browser (Next.js App Router, React, Tailwind, Recharts)
     └── /api/cron        ── daily forecast refresh (Vercel Cron)
          │
          ├── Claude API (claude-3-5-sonnet) — tool-use for structured agent output
-         ├── DynamoDB — raw uploaded CSV rows (companyId PK, rowId SK)
-         └── Aurora PostgreSQL Serverless v2 — cleaned tables via RDS Data API
+         ├── DynamoDB — raw uploaded CSV rows (companyId PK, rowId SK, type-uploadedAt GSI, TTL on ttl)
+         └── Aurora PostgreSQL Serverless v2 — cleaned tables via RDS Data API, indexed on company_id (+sku)
 ```
 
 ### Aurora Tables (drizzle-orm schema)
 
-| Table | Contents |
-|---|---|
-| `sku_sales_history` | Daily sales transactions per SKU |
-| `inventory` | On-hand qty, WIP qty, unit cost, vendor info, lead time |
-| `invoices` | AR: customer bills with issue/due/paid dates |
-| `customers` | Payment behavior derived from invoice history |
-| `payables` | AP: vendor bills with issue/due/paid dates |
-| `vendors` | Vendor master |
-| `cash_flow_forecast` | Saved 90-day AI forecast rows |
+| Table | Contents | Index |
+|---|---|---|
+| `sku_sales_history` | Daily sales transactions per SKU | `(company_id, sku)` |
+| `inventory` | On-hand qty, WIP qty, unit cost, vendor info, lead time | `(company_id, sku)` |
+| `invoices` | AR: customer bills with issue/due/paid dates | `(company_id)` |
+| `customers` | Payment behavior derived from invoice history | `(company_id, id)` primary key |
+| `payables` | AP: vendor bills with issue/due/paid dates | `(company_id)` |
+| `vendors` | Vendor master | `(company_id, id)` primary key |
+| `cash_flow_forecast` | Saved 90-day AI forecast rows | `(company_id)` |
+| `loan_scenarios` | Reserved for persisting financing comparisons — schema only, not yet written to | `(company_id)` |
+
+Every tenant-scoped table carries an explicit `company_id` index (composite with `sku` where it's the join key) instead of relying on full scans — added once real upload volume made sequential scans the obvious next bottleneck.
+
+### DynamoDB (`cashflow-raw`)
+
+- **PK** `companyId`, **SK** `rowId` (`${uploadId}#${rowIndex}`)
+- **GSI** `type-uploadedAt-index` (PK `type`, SK `uploadedAt`) — supports querying raw rows by type across the table without a per-company scan; groundwork for future cross-tenant/admin tooling
+- **TTL** on the `ttl` attribute (`uploadedAt + 90 days`) — raw rows are a transient staging area ahead of `normalizeCompany()`; once normalized into Aurora they don't need to live forever, so they expire automatically instead of accumulating indefinitely
 
 ### AI Agents (`/agents/`)
 
@@ -118,6 +127,7 @@ All agents use Claude's tool-use API to return structured JSON — no free-form 
 - **WIP included in days-of-supply.** `daysOfSupply = (qtyOnHand + qtyWip) / avgDailyVelocity` — ignoring WIP understates available supply and inflates the reorder queue.
 - **APR normalization.** Liquidating inventory at a 33% haircut is not comparable to a 10% annual loan. The financing table shows true annualized APR only for time-priced instruments.
 - **Dual-line cash vs profit chart.** The vertical gap between the cash balance line and the accrual P&L line at any point in time equals the working capital deployed in AR + inventory − AP — visually explaining why profitable businesses run out of cash.
+- **Raw rows expire; normalized data doesn't.** DynamoDB rows are a staging area, not a system of record — they TTL out 90 days after upload. Aurora, the source of truth for the dashboard, keeps everything and is indexed instead of pruned.
 
 
 ## Data Flow
