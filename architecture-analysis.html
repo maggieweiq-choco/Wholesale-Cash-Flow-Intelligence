@@ -7,8 +7,8 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    background: #f8fafc;
-    color: #0f172a;
+    background: #E8ECF0;
+    color: #1A2B3C;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
   }
@@ -22,29 +22,29 @@
     font-size: 11px;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: #2563eb;
+    color: #2A5090;
     font-weight: 700;
     margin-bottom: 12px;
   }
   h1 {
     font-size: 30px;
     font-weight: 800;
-    color: #0f172a;
+    color: #0F1E2E;
     margin-bottom: 10px;
     letter-spacing: -.02em;
   }
   .subtitle {
     font-size: 15px;
-    color: #64748b;
+    color: #4A6080;
     line-height: 1.65;
     max-width: 700px;
   }
   .diagram-card {
     background: #fff;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #C8D0DC;
     border-radius: 18px;
     padding: 40px 40px 32px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
   }
   svg { width: 100%; height: auto; display: block; }
   .legend {
@@ -54,15 +54,15 @@
     align-items: center;
     margin-top: 28px;
     padding-top: 22px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #D8DCE4;
   }
-  .li { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: #64748b; }
+  .li { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: #4A6080; }
   .ld { width: 32px; height: 2.5px; border-radius: 2px; flex-shrink: 0; }
   .ld-dash {
     width: 32px; height: 2.5px; flex-shrink: 0;
-    background: repeating-linear-gradient(90deg,#d97706 0,#d97706 6px,transparent 6px,transparent 11px);
+    background: repeating-linear-gradient(90deg,#8B5C10 0,#8B5C10 6px,transparent 6px,transparent 11px);
   }
-  .ts { margin-left: auto; font-size: 11.5px; color: #94a3b8; }
+  .ts { margin-left: auto; font-size: 11.5px; color: #8A9AAA; }
 </style>
 </head>
 <body>
@@ -77,221 +77,207 @@
   <div class="diagram-card">
     <svg viewBox="0 0 1100 744" xmlns="http://www.w3.org/2000/svg" aria-label="System architecture diagram">
       <defs>
-        <marker id="a-blue" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#2563eb"/>
+        <marker id="a-navy" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#2A5090"/>
         </marker>
-        <marker id="a-purple" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#7c3aed"/>
+        <marker id="a-indigo" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#522888"/>
         </marker>
-        <marker id="a-orange" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
-          <path d="M0,0 L8,4 L0,8 Z" fill="#d97706"/>
+        <marker id="a-amber" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8B5C10"/>
         </marker>
       </defs>
 
-      <!-- ─────────────────────────────────────────────────
-           ZONE BACKGROUNDS
-      ───────────────────────────────────────────────────── -->
+      <!-- ── ZONE BACKGROUNDS ── -->
 
       <!-- CLIENT ZONE -->
       <rect x="6" y="10" width="1088" height="82" rx="10"
-            fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+            fill="#EBF0F7" stroke="#7A9CC0" stroke-width="1.5"/>
 
       <!-- API ZONE -->
       <rect x="6" y="106" width="1088" height="216" rx="10"
-            fill="#faf5ff" stroke="#ddd6fe" stroke-width="1.5"/>
+            fill="#EEEAF8" stroke="#8878C8" stroke-width="1.5"/>
 
       <!-- SERVICE ZONE -->
       <rect x="6" y="336" width="1088" height="180" rx="10"
-            fill="#ecfeff" stroke="#a5f3fc" stroke-width="1.5"/>
+            fill="#E8F2EA" stroke="#6AA880" stroke-width="1.5"/>
 
       <!-- DATA ZONE -->
       <rect x="6" y="530" width="1088" height="204" rx="10"
-            fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
+            fill="#F7F0E6" stroke="#C8A050" stroke-width="1.5"/>
 
       <!-- ZONE LABELS -->
-      <text x="20" y="127" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#6d28d9">API LAYER — NEXT.JS ROUTE HANDLERS</text>
-      <text x="20" y="356" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#0e7490">SERVICE LAYER</text>
-      <text x="20" y="550" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#b45309">DATA LAYER</text>
+      <text x="20" y="127" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#28186E">API LAYER — NEXT.JS ROUTE HANDLERS</text>
+      <text x="20" y="356" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#1A4D28">SERVICE LAYER</text>
+      <text x="20" y="550" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#684008">DATA LAYER</text>
 
-      <!-- ─────────────────────────────────────────────────
-           CLIENT BOX
-      ───────────────────────────────────────────────────── -->
+      <!-- ── CLIENT BOX ── -->
       <rect x="12" y="16" width="1076" height="70" rx="9"
-            fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
-      <text x="18" y="34" font-family="'SF Mono',Consolas,monospace" font-size="10" font-weight="700" letter-spacing=".1em" fill="#1d4ed8">CLIENT LAYER</text>
-      <text x="550" y="46" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">Browser · Next.js App Router · Deployed on Vercel</text>
-      <text x="550" y="68" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" fill="#64748b">Dashboard · Upload · Inventory Details · Purchasing Details</text>
+            fill="#fff" stroke="#5A88C0" stroke-width="1.5"/>
+      <text x="18" y="34" font-family="'SF Mono',Consolas,monospace" font-size="10" font-weight="700" letter-spacing=".1em" fill="#1A3360">CLIENT LAYER</text>
+      <text x="550" y="46" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="15" font-weight="700" fill="#1A3360">Browser · Next.js App Router · Deployed on Vercel</text>
+      <text x="550" y="68" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" fill="#4A6080">Dashboard · Upload · Inventory Details · Purchasing Details</text>
 
-      <!-- ─────────────────────────────────────────────────
-           API BOXES  (y=138, h=176)
-      ───────────────────────────────────────────────────── -->
+      <!-- ── API BOXES ── -->
 
       <!-- BOX A: /api/projection -->
       <rect x="12" y="138" width="334" height="176" rx="9"
-            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
-      <rect x="12" y="138" width="334" height="32" rx="9" fill="#ede9fe"/>
-      <rect x="12" y="158" width="334" height="12" fill="#ede9fe"/>
-      <text x="24" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">/api/projection</text>
-      <text x="24" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Deterministic — no LLM on load</text>
-      <text x="24" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Real AR/AP due dates from Aurora</text>
-      <text x="24" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Supports extraInflows what-if param</text>
-      <text x="24" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Returns cash + accrual P&amp;L curves</text>
-      <text x="24" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#94a3b8">lib/projection.ts · scheduled-outflows.ts</text>
+            fill="#fff" stroke="#7870BE" stroke-width="1.5"/>
+      <rect x="12" y="138" width="334" height="32" rx="9" fill="#D5D0EE"/>
+      <rect x="12" y="158" width="334" height="12" fill="#D5D0EE"/>
+      <text x="24" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#28186E">/api/projection</text>
+      <text x="24" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Deterministic — no LLM on load</text>
+      <text x="24" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Real AR/AP due dates from Aurora</text>
+      <text x="24" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Supports extraInflows what-if param</text>
+      <text x="24" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Returns cash + accrual P&amp;L curves</text>
+      <text x="24" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#8A98A8">lib/projection.ts · scheduled-outflows.ts</text>
 
       <!-- BOX B: AI Agent Routes -->
       <rect x="384" y="138" width="332" height="176" rx="9"
-            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
-      <rect x="384" y="138" width="332" height="32" rx="9" fill="#ede9fe"/>
-      <rect x="384" y="158" width="332" height="12" fill="#ede9fe"/>
-      <text x="396" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">AI Agent Route Handlers</text>
-      <text x="396" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/forecast  ·  /api/inventory</text>
-      <text x="396" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/receivables  ·  /api/payables</text>
-      <text x="396" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/purchasing  ·  /api/financing</text>
-      <text x="396" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Each calls getCompanyData() first</text>
-      <text x="396" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#94a3b8">Injects real Aurora rows into each prompt</text>
+            fill="#fff" stroke="#7870BE" stroke-width="1.5"/>
+      <rect x="384" y="138" width="332" height="32" rx="9" fill="#D5D0EE"/>
+      <rect x="384" y="158" width="332" height="12" fill="#D5D0EE"/>
+      <text x="396" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#28186E">AI Agent Route Handlers</text>
+      <text x="396" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">/api/forecast  ·  /api/inventory</text>
+      <text x="396" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">/api/receivables  ·  /api/payables</text>
+      <text x="396" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">/api/purchasing  ·  /api/financing</text>
+      <text x="396" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Each calls getCompanyData() first</text>
+      <text x="396" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#8A98A8">Injects real Aurora rows into each prompt</text>
 
       <!-- BOX C: Data Pipeline -->
       <rect x="754" y="138" width="334" height="176" rx="9"
-            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
-      <rect x="754" y="138" width="334" height="32" rx="9" fill="#ede9fe"/>
-      <rect x="754" y="158" width="334" height="12" fill="#ede9fe"/>
-      <text x="766" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">Data Pipeline &amp; Cron</text>
-      <text x="766" y="187" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/upload    <tspan fill="#64748b" font-family="-apple-system,sans-serif">CSV → DynamoDB</tspan></text>
-      <text x="766" y="208" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/normalize <tspan fill="#64748b" font-family="-apple-system,sans-serif">DynamoDB → Aurora</tspan></text>
-      <text x="766" y="229" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/seed      <tspan fill="#64748b" font-family="-apple-system,sans-serif">loads sample data</tspan></text>
-      <text x="766" y="250" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/cron      <tspan fill="#64748b" font-family="-apple-system,sans-serif">Vercel · 06:00 UTC</tspan></text>
+            fill="#fff" stroke="#7870BE" stroke-width="1.5"/>
+      <rect x="754" y="138" width="334" height="32" rx="9" fill="#D5D0EE"/>
+      <rect x="754" y="158" width="334" height="12" fill="#D5D0EE"/>
+      <text x="766" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#28186E">Data Pipeline &amp; Cron</text>
+      <text x="766" y="187" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">/api/upload    <tspan fill="#5A6878" font-family="-apple-system,sans-serif">CSV → DynamoDB</tspan></text>
+      <text x="766" y="208" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">/api/normalize <tspan fill="#5A6878" font-family="-apple-system,sans-serif">DynamoDB → Aurora</tspan></text>
+      <text x="766" y="229" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">/api/seed      <tspan fill="#5A6878" font-family="-apple-system,sans-serif">loads sample data</tspan></text>
+      <text x="766" y="250" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">/api/cron      <tspan fill="#5A6878" font-family="-apple-system,sans-serif">Vercel · 06:00 UTC</tspan></text>
 
-      <!-- ─────────────────────────────────────────────────
-           SERVICE BOXES  (y=368, h=140)
-      ───────────────────────────────────────────────────── -->
+      <!-- ── SERVICE BOXES ── -->
 
       <!-- BOX D: Projection Engine -->
       <rect x="12" y="368" width="334" height="140" rx="9"
-            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
-      <rect x="12" y="368" width="334" height="30" rx="9" fill="#cffafe"/>
-      <rect x="12" y="386" width="334" height="12" fill="#cffafe"/>
-      <text x="24" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">Projection Engine</text>
-      <text x="24" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">lib/projection.ts</text>
-      <text x="24" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Deterministic cash curve (no LLM)</text>
-      <text x="24" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Real payables replace demo events</text>
-      <text x="24" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">WIP-inclusive days-of-supply</text>
+            fill="#fff" stroke="#529870" stroke-width="1.5"/>
+      <rect x="12" y="368" width="334" height="30" rx="9" fill="#C0DCCA"/>
+      <rect x="12" y="386" width="334" height="12" fill="#C0DCCA"/>
+      <text x="24" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#1A4D28">Projection Engine</text>
+      <text x="24" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">lib/projection.ts</text>
+      <text x="24" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Deterministic cash curve (no LLM)</text>
+      <text x="24" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Real payables replace demo events</text>
+      <text x="24" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">WIP-inclusive days-of-supply</text>
 
       <!-- BOX E: Claude API -->
       <rect x="384" y="368" width="332" height="140" rx="9"
-            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
-      <rect x="384" y="368" width="332" height="30" rx="9" fill="#cffafe"/>
-      <rect x="384" y="386" width="332" height="12" fill="#cffafe"/>
-      <text x="396" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">Anthropic Claude API</text>
-      <text x="396" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">claude-sonnet-4-6</text>
-      <text x="396" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">tool_choice → forced structured JSON</text>
-      <text x="396" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">cashflow · inventory · receivables</text>
-      <text x="396" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">payables · purchasing · financing</text>
+            fill="#fff" stroke="#529870" stroke-width="1.5"/>
+      <rect x="384" y="368" width="332" height="30" rx="9" fill="#C0DCCA"/>
+      <rect x="384" y="386" width="332" height="12" fill="#C0DCCA"/>
+      <text x="396" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#1A4D28">Anthropic Claude API</text>
+      <text x="396" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">claude-sonnet-4-6</text>
+      <text x="396" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">tool_choice → forced structured JSON</text>
+      <text x="396" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">cashflow · inventory · receivables</text>
+      <text x="396" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">payables · purchasing · financing</text>
 
       <!-- BOX F: ETL -->
       <rect x="754" y="368" width="334" height="140" rx="9"
-            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
-      <rect x="754" y="368" width="334" height="30" rx="9" fill="#cffafe"/>
-      <rect x="754" y="386" width="334" height="12" fill="#cffafe"/>
-      <text x="766" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">ETL / Normalization</text>
-      <text x="766" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">lib/etl.ts · PapaParse</text>
-      <text x="766" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Derives customers from invoices</text>
-      <text x="766" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Idempotent: delete-then-insert</text>
-      <text x="766" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">ensureFlexibleColumns migration</text>
+            fill="#fff" stroke="#529870" stroke-width="1.5"/>
+      <rect x="754" y="368" width="334" height="30" rx="9" fill="#C0DCCA"/>
+      <rect x="754" y="386" width="334" height="12" fill="#C0DCCA"/>
+      <text x="766" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#1A4D28">ETL / Normalization</text>
+      <text x="766" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#2E3D4E">lib/etl.ts · PapaParse</text>
+      <text x="766" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Derives customers from invoices</text>
+      <text x="766" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Idempotent: delete-then-insert</text>
+      <text x="766" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">ensureFlexibleColumns migration</text>
 
-      <!-- ─────────────────────────────────────────────────
-           DATA BOXES  (y=562, h=162)
-      ───────────────────────────────────────────────────── -->
+      <!-- ── DATA BOXES ── -->
 
       <!-- BOX G: Aurora PostgreSQL -->
       <rect x="12" y="562" width="682" height="162" rx="9"
-            fill="#fff" stroke="#fcd34d" stroke-width="1.5"/>
-      <rect x="12" y="562" width="682" height="30" rx="9" fill="#fef3c7"/>
-      <rect x="12" y="580" width="682" height="12" fill="#fef3c7"/>
-      <text x="24" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#92400e">Aurora PostgreSQL Serverless v2</text>
-      <text x="24" y="609" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">RDS Data API  ·  Drizzle ORM (aws-data-api/pg)  ·  7 tables</text>
-      <line x1="24" y1="620" x2="680" y2="620" stroke="#fde68a" stroke-width="1.2"/>
-      <text x="24" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">sku_sales_history</text>
-      <text x="150" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="163" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">inventory</text>
-      <text x="225" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="238" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">invoices</text>
-      <text x="299" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="312" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">customers</text>
-      <text x="389" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="402" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">payables</text>
-      <text x="460" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="473" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">vendors</text>
-      <text x="527" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
-      <text x="540" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">cash_flow_forecast</text>
-      <text x="24" y="661" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">customers derived from invoices · payables drive outflows when loaded</text>
-      <text x="24" y="680" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">falls back to scheduled demo events if payables empty · forecast overwritten daily by cron</text>
-      <text x="24" y="699" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">HTTP-based RDS Data API — no connection pool exhaustion in serverless environments</text>
-      <text x="24" y="717" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">APP_AWS_ACCESS_KEY_ID prefix avoids Vercel runtime conflict with standard AWS_ vars</text>
+            fill="#fff" stroke="#C09840" stroke-width="1.5"/>
+      <rect x="12" y="562" width="682" height="30" rx="9" fill="#EED8A0"/>
+      <rect x="12" y="580" width="682" height="12" fill="#EED8A0"/>
+      <text x="24" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5C3608">Aurora PostgreSQL Serverless v2</text>
+      <text x="24" y="609" font-family="-apple-system,sans-serif" font-size="12.5" fill="#5A6878">RDS Data API  ·  Drizzle ORM (aws-data-api/pg)  ·  7 tables</text>
+      <line x1="24" y1="620" x2="680" y2="620" stroke="#C8A050" stroke-width="1.2"/>
+      <text x="24"  y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">sku_sales_history</text>
+      <text x="150" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="163" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">inventory</text>
+      <text x="225" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="238" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">invoices</text>
+      <text x="299" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="312" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">customers</text>
+      <text x="389" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="402" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">payables</text>
+      <text x="460" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="473" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">vendors</text>
+      <text x="527" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#A8A090"> · </text>
+      <text x="540" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#8B5C10">cash_flow_forecast</text>
+      <text x="24" y="661" font-family="-apple-system,sans-serif" font-size="12.5" fill="#5A6878">customers derived from invoices · payables drive outflows when loaded</text>
+      <text x="24" y="680" font-family="-apple-system,sans-serif" font-size="12.5" fill="#5A6878">falls back to scheduled demo events if payables empty · forecast overwritten daily by cron</text>
+      <text x="24" y="699" font-family="-apple-system,sans-serif" font-size="12.5" fill="#5A6878">HTTP-based RDS Data API — no connection pool exhaustion in serverless environments</text>
+      <text x="24" y="717" font-family="-apple-system,sans-serif" font-size="12.5" fill="#5A6878">APP_AWS_ACCESS_KEY_ID prefix avoids Vercel runtime conflict with standard AWS_ vars</text>
 
       <!-- BOX H: DynamoDB -->
       <rect x="712" y="562" width="376" height="162" rx="9"
-            fill="#fff" stroke="#fcd34d" stroke-width="1.5"/>
-      <rect x="712" y="562" width="376" height="30" rx="9" fill="#fef3c7"/>
-      <rect x="712" y="580" width="376" height="12" fill="#fef3c7"/>
-      <text x="724" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#92400e">Amazon DynamoDB (on-demand)</text>
-      <text x="724" y="611" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Table: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706" font-weight="600">cashflow-raw</tspan></text>
-      <text x="724" y="633" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">PK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706">companyId</tspan></text>
-      <text x="724" y="655" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">SK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706">rowId</tspan>  (uploadId # rowIndex)</text>
-      <text x="724" y="677" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">type: sales / inventory / invoice / payable</text>
-      <text x="724" y="699" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Raw uploaded CSV rows — unprocessed</text>
-      <text x="724" y="718" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">Cleared and re-written on each normalize run</text>
+            fill="#fff" stroke="#C09840" stroke-width="1.5"/>
+      <rect x="712" y="562" width="376" height="30" rx="9" fill="#EED8A0"/>
+      <rect x="712" y="580" width="376" height="12" fill="#EED8A0"/>
+      <text x="724" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5C3608">Amazon DynamoDB (on-demand)</text>
+      <text x="724" y="614" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">Table: <tspan font-family="'SF Mono',Consolas,monospace" fill="#8B5C10" font-weight="600">cashflow-raw</tspan></text>
+      <text x="724" y="637" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">PK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#8B5C10">companyId</tspan></text>
+      <text x="724" y="659" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">SK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#8B5C10">rowId</tspan>  (uploadId # rowIndex)</text>
+      <text x="724" y="681" font-family="-apple-system,sans-serif" font-size="13.5" fill="#2E3D4E">type: sales / inventory / invoice / payable</text>
+      <text x="724" y="702" font-family="-apple-system,sans-serif" font-size="13" fill="#2E3D4E">Raw uploaded CSV rows — unprocessed</text>
+      <text x="724" y="720" font-family="-apple-system,sans-serif" font-size="12" fill="#5A6878">Cleared and re-written on each normalize run</text>
 
-      <!-- ─────────────────────────────────────────────────
-           ARROWS
-      ───────────────────────────────────────────────────── -->
+      <!-- ── ARROWS ── -->
 
-      <!-- 1. Client → API  (blue, HTTPS) -->
-      <line x1="179" y1="86" x2="179" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
-      <line x1="550" y1="86" x2="550" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
-      <line x1="921" y1="86" x2="921" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
-      <text x="188" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
-      <text x="559" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
-      <text x="930" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
+      <!-- 1. Client → API (navy, HTTPS) -->
+      <line x1="179" y1="86" x2="179" y2="138" stroke="#2A5090" stroke-width="2" marker-end="url(#a-navy)"/>
+      <line x1="550" y1="86" x2="550" y2="138" stroke="#2A5090" stroke-width="2" marker-end="url(#a-navy)"/>
+      <line x1="921" y1="86" x2="921" y2="138" stroke="#2A5090" stroke-width="2" marker-end="url(#a-navy)"/>
+      <text x="188" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2A5090">HTTPS</text>
+      <text x="559" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2A5090">HTTPS</text>
+      <text x="930" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2A5090">HTTPS</text>
 
-      <!-- 2. API → Service  (purple) -->
-      <line x1="179" y1="314" x2="179" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
-      <line x1="550" y1="314" x2="550" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
-      <line x1="921" y1="314" x2="921" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
+      <!-- 2. API → Service (indigo) -->
+      <line x1="179" y1="314" x2="179" y2="368" stroke="#522888" stroke-width="2" marker-end="url(#a-indigo)"/>
+      <line x1="550" y1="314" x2="550" y2="368" stroke="#522888" stroke-width="2" marker-end="url(#a-indigo)"/>
+      <line x1="921" y1="314" x2="921" y2="368" stroke="#522888" stroke-width="2" marker-end="url(#a-indigo)"/>
 
-      <!-- 3. Projection Engine → Aurora  (straight down) -->
-      <line x1="179" y1="508" x2="179" y2="562" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
-      <text x="188" y="538" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">reads</text>
+      <!-- 3. Projection Engine → Aurora (straight down) -->
+      <line x1="179" y1="508" x2="179" y2="562" stroke="#8B5C10" stroke-width="2" marker-end="url(#a-amber)"/>
+      <text x="188" y="538" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#8B5C10">reads</text>
 
-      <!-- 4a. Claude → Aurora  (L-shape, solid) -->
+      <!-- 4a. Claude → Aurora (L-shape, solid, writes forecast) -->
       <path d="M 544,508 L 544,534 L 352,534 L 352,562"
-            fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
+            fill="none" stroke="#8B5C10" stroke-width="2" marker-end="url(#a-amber)"/>
 
-      <!-- 4b. Aurora → Claude  (L-shape, dashed, reads) -->
+      <!-- 4b. Aurora → Claude (L-shape, dashed, reads data) -->
       <path d="M 364,562 L 364,534 L 556,534 L 556,508"
-            fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a-orange)"/>
+            fill="none" stroke="#8B5C10" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a-amber)"/>
 
-      <text x="450" y="528" text-anchor="middle"
-            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">reads data · writes forecast</text>
+      <text x="454" y="524" text-anchor="middle"
+            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#8B5C10">reads data · writes forecast</text>
 
-      <!-- 5. ETL → DynamoDB -->
+      <!-- 5. ETL → DynamoDB (upload) -->
       <path d="M 921,508 L 921,534 L 900,534 L 900,562"
-            fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
-      <text x="932" y="530" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">upload</text>
+            fill="none" stroke="#8B5C10" stroke-width="2" marker-end="url(#a-amber)"/>
+      <text x="932" y="530" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#8B5C10">upload</text>
 
-      <!-- 6. DynamoDB → Aurora  (normalize, dashed horizontal) -->
-      <path d="M 712,643 L 694,643"
-            fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#a-orange)"/>
-      <text x="752" y="632" text-anchor="middle"
-            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">normalize</text>
-      <text x="752" y="647" text-anchor="middle"
-            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">(ETL)</text>
+      <!-- 6. DynamoDB → Aurora (normalize, positioned in post-header gap before first content row) -->
+      <path d="M 712,600 L 694,600"
+            fill="none" stroke="#8B5C10" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#a-amber)"/>
+      <text x="703" y="596" text-anchor="middle"
+            font-family="'SF Mono',Consolas,monospace" font-size="10" fill="#8B5C10">normalize (ETL)</text>
 
     </svg>
 
     <div class="legend">
-      <div class="li"><div class="ld" style="background:#2563eb;"></div>HTTPS request (client → server)</div>
-      <div class="li"><div class="ld" style="background:#7c3aed;"></div>Internal function call (API → service)</div>
-      <div class="li"><div class="ld" style="background:#d97706;"></div>Database write (service → data)</div>
+      <div class="li"><div class="ld" style="background:#2A5090;"></div>HTTPS request (client → server)</div>
+      <div class="li"><div class="ld" style="background:#522888;"></div>Internal function call (API → service)</div>
+      <div class="li"><div class="ld" style="background:#8B5C10;"></div>Database write (service → data)</div>
       <div class="li"><div class="ld-dash"></div>Database read / normalize pass</div>
       <div class="ts">Commit 6d8741c · 2026-06-28</div>
     </div>
