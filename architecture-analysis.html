@@ -3,491 +3,300 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wholesale Cash Flow Intelligence — Architecture & Product Analysis</title>
+<title>Wholesale Cash Flow Intelligence — System Architecture</title>
 <style>
-  :root{
-    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e;
-    --blue:#79c0ff; --green:#56d364; --purple:#d2a8ff; --orange:#e3b341; --red:#ff7b72; --teal:#76e4f7;
-    --blue-bg:rgba(37,99,235,0.15); --green-bg:rgba(22,163,74,0.15); --purple-bg:rgba(124,58,237,0.15);
-    --orange-bg:rgba(217,119,6,0.15); --red-bg:rgba(220,38,38,0.15); --teal-bg:rgba(8,145,178,0.15);
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    line-height:1.6; padding:0 0 80px;
+  .page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 56px 44px 88px;
   }
-  .wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
-  header.hero{
-    padding:56px 28px 40px; border-bottom:1px solid var(--border);
-    background:linear-gradient(180deg, rgba(37,99,235,0.08), transparent);
+  header { margin-bottom: 44px; }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #2563eb;
+    font-weight: 700;
+    margin-bottom: 12px;
   }
-  header.hero .wrap{display:flex; flex-direction:column; gap:10px;}
-  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); font-weight:700;}
-  h1{font-size:30px; margin:0; color:#fff; font-weight:800;}
-  .hero-sub{color:var(--muted); font-size:14px; max-width:760px;}
-  .meta-row{display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12px; color:var(--muted);}
-  .meta-row b{color:var(--text);}
-  section{padding:48px 0; border-bottom:1px solid var(--border);}
-  section:last-child{border-bottom:none;}
-  h2{font-size:20px; color:#fff; margin:0 0 6px; display:flex; align-items:center; gap:10px;}
-  .num{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:26px; height:26px; border-radius:7px; background:var(--blue-bg); color:var(--blue);
-    font-size:13px; font-weight:800;
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 10px;
+    letter-spacing: -.02em;
   }
-  .section-desc{color:var(--muted); font-size:13px; margin:0 0 24px; max-width:820px;}
-  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px;}
-  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px 20px;}
-  .card h3{margin:0 0 8px; font-size:14px; color:var(--blue);}
-  .card p{margin:0; font-size:13px; color:var(--muted);}
-  table{width:100%; border-collapse:collapse; font-size:13px; background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden;}
-  thead th{
-    text-align:left; padding:10px 14px; background:rgba(255,255,255,0.03);
-    color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em;
-    border-bottom:1px solid var(--border);
+  .subtitle {
+    font-size: 15px;
+    color: #64748b;
+    line-height: 1.65;
+    max-width: 700px;
   }
-  tbody td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:top;}
-  tbody tr:last-child td{border-bottom:none;}
-  code, .mono{font-family:'SF Mono','Fira Code',Consolas,monospace; font-size:12.5px;}
-  .mono-cell{color:var(--teal);}
-  .tag{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:5px; white-space:nowrap;}
-  .tag-blue{background:var(--blue-bg); color:var(--blue);}
-  .tag-green{background:var(--green-bg); color:var(--green);}
-  .tag-purple{background:var(--purple-bg); color:var(--purple);}
-  .tag-orange{background:var(--orange-bg); color:var(--orange);}
-  .tag-red{background:var(--red-bg); color:var(--red);}
-  .tag-teal{background:var(--teal-bg); color:var(--teal);}
-  .status-done{color:var(--green); font-weight:700;}
-  .status-partial{color:var(--orange); font-weight:700;}
-  .status-missing{color:var(--red); font-weight:700;}
-  .grid2{display:grid; grid-template-columns:1.1fr .9fr; gap:20px;}
-  @media (max-width:880px){.grid2{grid-template-columns:1fr;}}
-  .pipeline{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; margin:18px 0;}
-  .pstep{background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text);}
-  .pstep b{color:var(--blue);}
-  .parrow{color:var(--muted);}
-  .quote{
-    border-left:3px solid var(--blue); padding:10px 16px; color:var(--muted); font-size:13px;
-    background:rgba(255,255,255,0.02); border-radius:0 8px 8px 0; margin:14px 0;
+  .diagram-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 40px 40px 32px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
   }
-  .toc{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
-  .toc a{
-    font-size:12.5px; color:var(--blue); text-decoration:none; background:var(--panel);
-    border:1px solid var(--border); padding:6px 12px; border-radius:20px;
+  svg { width: 100%; height: auto; display: block; }
+  .legend {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid #f1f5f9;
   }
-  .toc a:hover{border-color:var(--blue);}
-  ul.clean{margin:0; padding-left:18px; font-size:13px; color:var(--text);}
-  ul.clean li{margin-bottom:6px;}
-  svg text{font-family:-apple-system,sans-serif;}
-  .folder{color:var(--blue);} .file{color:var(--text);} .comment{color:#484f58; font-size:11px;}
-  .indent1{padding-left:18px;} .indent2{padding-left:36px;}
-  .frow{display:flex; align-items:baseline; gap:0; margin:1px 0; font-size:12.5px;}
-  .arrow{color:#484f58; margin-right:4px;}
-  footer{padding:36px 28px; text-align:center; color:var(--muted); font-size:12px;}
+  .li { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: #64748b; }
+  .ld { width: 32px; height: 2.5px; border-radius: 2px; flex-shrink: 0; }
+  .ld-dash {
+    width: 32px; height: 2.5px; flex-shrink: 0;
+    background: repeating-linear-gradient(90deg,#d97706 0,#d97706 6px,transparent 6px,transparent 11px);
+  }
+  .ts { margin-left: auto; font-size: 11.5px; color: #94a3b8; }
 </style>
 </head>
 <body>
+<div class="page">
 
-<header class="hero">
-  <div class="wrap">
-    <div class="eyebrow">H0 Hackathon · B2B Track · Full Product & Architecture Analysis</div>
-    <h1>Wholesale Cash Flow Intelligence</h1>
-    <p class="hero-sub">Generated by file-by-file analysis of the current codebase. Covers product positioning, tech stack, system architecture, data model, key architectural decisions, feature implementation status, known gaps, and submission checklist verification.</p>
-    <div class="meta-row">
-      <span><b>Deadline</b> 2026-06-29</span>
-      <span><b>Analysis Date</b> 2026-06-22</span>
-      <span><b>Track</b> Track 2 — B2B</span>
-      <span><b>Contributors</b> Maggie (maggieweiq) · Kira Zhang</span>
-      <span><b>Commits</b> 7</span>
-    </div>
-    <div class="toc">
-      <a href="#product">① Product Analysis</a>
-      <a href="#stack">② Tech Stack & Environment</a>
-      <a href="#structure">③ Code Structure</a>
-      <a href="#arch">④ System Architecture</a>
-      <a href="#datamodel">⑤ Data Model</a>
-      <a href="#functions">⑥ Feature Inventory</a>
-      <a href="#decisions">⑦ Key Architectural Decisions</a>
-      <a href="#gaps">⑧ Known Gaps & Risks</a>
-      <a href="#checklist">⑨ Submission Checklist</a>
-      <a href="#next">⑩ Recommended Next Steps</a>
-    </div>
-  </div>
-</header>
+  <header>
+    <div class="eyebrow">Wholesale Cash Flow Intelligence · H0 Hackathon · B2B Track</div>
+    <h1>System Architecture</h1>
+    <p class="subtitle">How the application connects to back-end components — data ingestion, deterministic projection engine, AI agent pipeline, and persistent storage layers.</p>
+  </header>
 
-<div class="wrap">
+  <div class="diagram-card">
+    <svg viewBox="0 0 1100 744" xmlns="http://www.w3.org/2000/svg" aria-label="System architecture diagram">
+      <defs>
+        <marker id="a-blue" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#2563eb"/>
+        </marker>
+        <marker id="a-purple" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#7c3aed"/>
+        </marker>
+        <marker id="a-orange" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#d97706"/>
+        </marker>
+      </defs>
 
-<!-- 1. PRODUCT ANALYSIS -->
-<section id="product">
-  <h2><span class="num">1</span>Product Analysis</h2>
-  <p class="section-desc">Product positioning and value proposition reverse-engineered from the codebase (README, page copy, agent prompts).</p>
+      <!-- ─────────────────────────────────────────────────
+           ZONE BACKGROUNDS
+      ───────────────────────────────────────────────────── -->
 
-  <div class="quote">"On day 45, you'll be short $23,000 — should you liquidate inventory or take a loan?" — one-line product pitch</div>
+      <!-- CLIENT ZONE -->
+      <rect x="6" y="10" width="1088" height="82" rx="10"
+            fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
 
-  <div class="cards">
-    <div class="card">
-      <h3>Target User</h3>
-      <p>Wholesale business owners / finance managers (small-to-mid wholesale SMBs). Squeezed from both sides: cash locked in warehouse inventory and cash locked in customer payment terms (net 30/60/90). Most currently manage with Excel or gut instinct — both wildly inaccurate.</p>
-    </div>
-    <div class="card">
-      <h3>Core Problem</h3>
-      <p>Owners don't know when a cash gap will appear or how large it will be; they don't know whether to liquidate inventory, chase payments, or borrow first; all three are interdependent, so looking at any one dimension in isolation leads to the wrong decision.</p>
-    </div>
-    <div class="card">
-      <h3>Solution</h3>
-      <p>Claude agents consume sales history, inventory, and AR data to produce a 90-day daily cash flow timeline + dead stock list + collections priority + financing comparison — four outputs linked into one final recommendation.</p>
-    </div>
-    <div class="card">
-      <h3>Business Model</h3>
-      <p>No billing or subscription logic implemented in the current codebase (no pricing/billing files). Monetization strategy has not been built into the product — it remains conceptual.</p>
-    </div>
-  </div>
-</section>
+      <!-- API ZONE -->
+      <rect x="6" y="106" width="1088" height="216" rx="10"
+            fill="#faf5ff" stroke="#ddd6fe" stroke-width="1.5"/>
 
-<!-- 2. STACK -->
-<section id="stack">
-  <h2><span class="num">2</span>Tech Stack & Environment</h2>
-  <p class="section-desc">Actual dependencies and runtime environment from <code class="mono">package.json</code>, <code class="mono">.env.local.example</code>, and <code class="mono">vercel.json</code>.</p>
+      <!-- SERVICE ZONE -->
+      <rect x="6" y="336" width="1088" height="180" rx="10"
+            fill="#ecfeff" stroke="#a5f3fc" stroke-width="1.5"/>
 
-  <table>
-    <thead><tr><th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr></thead>
-    <tbody>
-      <tr><td><span class="tag tag-green">Frontend</span></td><td class="mono-cell">Next.js (App Router)</td><td class="mono">16.2.9</td><td>Page routing + Route Handlers, deployed on Vercel</td></tr>
-      <tr><td><span class="tag tag-green">Frontend</span></td><td class="mono-cell">React</td><td class="mono">19.2.4</td><td>UI rendering</td></tr>
-      <tr><td><span class="tag tag-green">Frontend</span></td><td class="mono-cell">Tailwind CSS</td><td class="mono">v4</td><td>Styling (utility classes, no custom theme)</td></tr>
-      <tr><td><span class="tag tag-green">Frontend</span></td><td class="mono-cell">Recharts</td><td class="mono">^2.13.3</td><td>Cash flow line chart (<code class="mono">CashflowChart</code>, see §8 for gaps)</td></tr>
-      <tr><td><span class="tag tag-purple">AI</span></td><td class="mono-cell">@anthropic-ai/sdk</td><td class="mono">^0.32.1</td><td>6 Claude agents, all using <code class="mono">tool_choice: forced tool</code> for structured output</td></tr>
-      <tr><td><span class="tag tag-purple">AI</span></td><td class="mono-cell">claude-sonnet-4-6</td><td class="mono">—</td><td>Model name hardcoded in <code class="mono">lib/claude.ts</code></td></tr>
-      <tr><td><span class="tag tag-orange">Database</span></td><td class="mono-cell">Aurora PostgreSQL Serverless v2</td><td class="mono">via Data API</td><td>Structured data: sales / inventory / invoices / customers / forecast / financing</td></tr>
-      <tr><td><span class="tag tag-orange">Database</span></td><td class="mono-cell">DynamoDB</td><td class="mono">on-demand</td><td>Raw upload storage (<code class="mono">cashflow-raw</code> table)</td></tr>
-      <tr><td><span class="tag tag-orange">ORM</span></td><td class="mono-cell">Drizzle ORM</td><td class="mono">^0.36.4</td><td>Aurora schema definition + queries via <code class="mono">aws-data-api/pg</code> driver</td></tr>
-      <tr><td><span class="tag tag-teal">AWS</span></td><td class="mono-cell">Bedrock Runtime (Titan Embeddings v2)</td><td class="mono">^3.700.0</td><td><code class="mono">embedText()</code> implemented but <b>zero calls anywhere in the codebase</b> — see §8</td></tr>
-      <tr><td><span class="tag tag-red">Infra</span></td><td class="mono-cell">Vercel Cron</td><td class="mono">daily 06:00 UTC</td><td>Calls <code class="mono">/api/cron</code> to refresh all companies' forecasts</td></tr>
-      <tr><td><span class="tag tag-blue">Validation</span></td><td class="mono-cell">Zod</td><td class="mono">^3.24.1</td><td>Installed but <b>no schema validation calls found anywhere in the code</b></td></tr>
-      <tr><td><span class="tag tag-blue">Tooling</span></td><td class="mono-cell">PapaParse</td><td class="mono">^5.4.1</td><td>CSV parsing (<code class="mono">lib/csv-parser.ts</code>)</td></tr>
-    </tbody>
-  </table>
+      <!-- DATA ZONE -->
+      <rect x="6" y="530" width="1088" height="204" rx="10"
+            fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
 
-  <div class="cards" style="margin-top:18px;">
-    <div class="card">
-      <h3>Environment Variables (.env.local.example)</h3>
-      <p class="mono" style="color:var(--text);">APP_AWS_ACCESS_KEY_ID · APP_AWS_SECRET_ACCESS_KEY · AWS_REGION · AURORA_CLUSTER_ARN · AURORA_SECRET_ARN · AURORA_DATABASE · DYNAMO_TABLE_NAME · ANTHROPIC_API_KEY · BEDROCK_REGION · CRON_SECRET</p>
-    </div>
-    <div class="card">
-      <h3>Deployment Requirements Met</h3>
-      <p>✅ Vercel deployment (<code class="mono">vercel.json</code> includes cron config)&nbsp;&nbsp;✅ Aurora PostgreSQL + DynamoDB dual-database satisfies the "choose one or combine" database requirement</p>
-    </div>
-  </div>
-</section>
+      <!-- ZONE LABELS -->
+      <text x="20" y="127" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#6d28d9">API LAYER — NEXT.JS ROUTE HANDLERS</text>
+      <text x="20" y="356" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#0e7490">SERVICE LAYER</text>
+      <text x="20" y="550" font-family="'SF Mono',Consolas,monospace" font-size="10.5" font-weight="700" letter-spacing=".1em" fill="#b45309">DATA LAYER</text>
 
-<!-- 3. STRUCTURE -->
-<section id="structure">
-  <h2><span class="num">3</span>Code Structure (verified against actual repo)</h2>
-  <p class="section-desc">The table below cross-references the original plan against the current repo — the plan is 100% implemented, plus 3 additional files beyond the original spec.</p>
+      <!-- ─────────────────────────────────────────────────
+           CLIENT BOX
+      ───────────────────────────────────────────────────── -->
+      <rect x="12" y="16" width="1076" height="70" rx="9"
+            fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+      <text x="18" y="34" font-family="'SF Mono',Consolas,monospace" font-size="10" font-weight="700" letter-spacing=".1em" fill="#1d4ed8">CLIENT LAYER</text>
+      <text x="550" y="46" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">Browser · Next.js App Router · Deployed on Vercel</text>
+      <text x="550" y="68" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" fill="#64748b">Dashboard · Upload · Inventory Details · Purchasing Details</text>
 
-  <div class="cards">
-    <div class="card">
-      <h3 style="color:var(--blue)">📁 app/</h3>
-      <div class="frow"><span class="folder">page.tsx</span></div><div class="comment indent1"># Dashboard home — all sections rendered here</div>
-      <div class="frow indent1"><span class="folder">upload/page.tsx</span></div>
-      <div class="frow indent1"><span class="folder">inventory/details/page.tsx</span></div>
-      <div class="frow indent1"><span class="folder">purchasing/details/page.tsx</span></div>
-    </div>
-    <div class="card">
-      <h3 style="color:var(--purple)">🔌 app/api/</h3>
-      <div class="frow"><span class="file">upload/route.ts</span></div>
-      <div class="frow"><span class="file">normalize/route.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">projection/route.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">forecast/route.ts</span></div>
-      <div class="frow"><span class="file">inventory/route.ts</span></div>
-      <div class="frow"><span class="file">receivables/route.ts</span></div>
-      <div class="frow"><span class="file">payables/route.ts</span></div>
-      <div class="frow"><span class="file">purchasing/route.ts</span></div>
-      <div class="frow"><span class="file">financing/route.ts</span></div>
-      <div class="frow"><span class="file">cron/route.ts</span></div>
-    </div>
-    <div class="card">
-      <h3 style="color:var(--teal)">🤖 agents/</h3>
-      <div class="frow"><span class="file">cashflow-agent.ts</span></div>
-      <div class="frow"><span class="file">inventory-agent.ts</span></div>
-      <div class="frow"><span class="file">receivables-agent.ts</span></div>
-      <div class="frow"><span class="file">payables-agent.ts</span></div>
-      <div class="frow"><span class="file">purchasing-agent.ts</span></div>
-      <div class="frow"><span class="file">financing-agent.ts</span></div>
-      <div class="frow"><span class="file">tools.ts</span></div>
-      <div class="comment indent1"># Tool schemas, all required fields present</div>
-    </div>
-    <div class="card">
-      <h3 style="color:var(--orange)">🗄️ db/ + lib/</h3>
-      <div class="frow"><span class="file">db/schema.ts</span><span class="comment" style="margin-left:6px;">7 Aurora tables</span></div>
-      <div class="frow"><span class="file">db/dynamo.ts</span><span class="comment" style="margin-left:6px;">RawUploadRow interface</span></div>
-      <div class="frow"><span class="file">lib/aurora.ts · dynamo.ts · claude.ts · bedrock.ts · csv-parser.ts</span></div>
-      <div class="frow"><span class="file">lib/etl.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">lib/queries.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">lib/projection.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">lib/scheduled-outflows.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-      <div class="frow"><span class="file">lib/sku-tiers.ts</span><span class="tag tag-orange" style="margin-left:8px;">added beyond plan</span></div>
-    </div>
-  </div>
-  <p class="section-desc" style="margin-top:16px;">The beyond-plan additions <code class="mono">etl.ts</code> / <code class="mono">queries.ts</code> / <code class="mono">normalize/route.ts</code> were added in the second commit — they clean DynamoDB raw data into Aurora and fixed the core bug where "agents had no data and invented numbers" (see §7). <code class="mono">projection.ts</code> is the deterministic cash engine that runs on every page load without an LLM call.</p>
-</section>
+      <!-- ─────────────────────────────────────────────────
+           API BOXES  (y=138, h=176)
+      ───────────────────────────────────────────────────── -->
 
-<!-- 4. ARCHITECTURE DIAGRAM -->
-<section id="arch">
-  <h2><span class="num">4</span>System Architecture Diagram</h2>
-  <p class="section-desc">Actual data flow for the dual-database + 6-agent system (reconstructed from code logic, not from a plan document).</p>
+      <!-- BOX A: /api/projection -->
+      <rect x="12" y="138" width="334" height="176" rx="9"
+            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
+      <rect x="12" y="138" width="334" height="32" rx="9" fill="#ede9fe"/>
+      <rect x="12" y="158" width="334" height="12" fill="#ede9fe"/>
+      <text x="24" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">/api/projection</text>
+      <text x="24" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Deterministic — no LLM on load</text>
+      <text x="24" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Real AR/AP due dates from Aurora</text>
+      <text x="24" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Supports extraInflows what-if param</text>
+      <text x="24" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Returns cash + accrual P&amp;L curves</text>
+      <text x="24" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#94a3b8">lib/projection.ts · scheduled-outflows.ts</text>
 
-  <svg viewBox="0 0 1120 460" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto;">
-    <defs>
-      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-        <path d="M0,0 L6,3 L0,6 Z" fill="#8b949e"/>
-      </marker>
-    </defs>
+      <!-- BOX B: AI Agent Routes -->
+      <rect x="384" y="138" width="332" height="176" rx="9"
+            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
+      <rect x="384" y="138" width="332" height="32" rx="9" fill="#ede9fe"/>
+      <rect x="384" y="158" width="332" height="12" fill="#ede9fe"/>
+      <text x="396" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">AI Agent Route Handlers</text>
+      <text x="396" y="187" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/forecast  ·  /api/inventory</text>
+      <text x="396" y="208" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/receivables  ·  /api/payables</text>
+      <text x="396" y="229" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">/api/purchasing  ·  /api/financing</text>
+      <text x="396" y="250" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Each calls getCompanyData() first</text>
+      <text x="396" y="303" font-family="'SF Mono',Consolas,monospace" font-size="11.5" font-style="italic" fill="#94a3b8">Injects real Aurora rows into each prompt</text>
 
-    <!-- Frontend -->
-    <rect x="20" y="20" width="200" height="90" rx="10" fill="#161b22" stroke="#2563eb" stroke-width="1.5"/>
-    <text x="120" y="44" fill="#79c0ff" font-size="13" font-weight="700" text-anchor="middle">Next.js Frontend</text>
-    <text x="120" y="64" fill="#8b949e" font-size="11" text-anchor="middle">Vercel Deploy</text>
-    <text x="120" y="80" fill="#8b949e" font-size="11" text-anchor="middle">Dashboard + CSV upload form</text>
-    <text x="120" y="96" fill="#8b949e" font-size="11" text-anchor="middle">client fetch → API routes</text>
+      <!-- BOX C: Data Pipeline -->
+      <rect x="754" y="138" width="334" height="176" rx="9"
+            fill="#fff" stroke="#c4b5fd" stroke-width="1.5"/>
+      <rect x="754" y="138" width="334" height="32" rx="9" fill="#ede9fe"/>
+      <rect x="754" y="158" width="334" height="12" fill="#ede9fe"/>
+      <text x="766" y="161" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#5b21b6">Data Pipeline &amp; Cron</text>
+      <text x="766" y="187" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/upload    <tspan fill="#64748b" font-family="-apple-system,sans-serif">CSV → DynamoDB</tspan></text>
+      <text x="766" y="208" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/normalize <tspan fill="#64748b" font-family="-apple-system,sans-serif">DynamoDB → Aurora</tspan></text>
+      <text x="766" y="229" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/seed      <tspan fill="#64748b" font-family="-apple-system,sans-serif">loads sample data</tspan></text>
+      <text x="766" y="250" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">/api/cron      <tspan fill="#64748b" font-family="-apple-system,sans-serif">Vercel · 06:00 UTC</tspan></text>
 
-    <!-- Upload API -->
-    <rect x="280" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
-    <text x="375" y="44" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">/api/upload</text>
-    <text x="375" y="64" fill="#8b949e" font-size="11" text-anchor="middle">CSV → PapaParse</text>
-    <text x="375" y="80" fill="#8b949e" font-size="11" text-anchor="middle">Write rows to DynamoDB</text>
+      <!-- ─────────────────────────────────────────────────
+           SERVICE BOXES  (y=368, h=140)
+      ───────────────────────────────────────────────────── -->
 
-    <!-- DynamoDB -->
-    <rect x="530" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#d97706" stroke-width="1.5"/>
-    <text x="625" y="44" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">DynamoDB</text>
-    <text x="625" y="64" fill="#8b949e" font-size="11" text-anchor="middle">cashflow-raw</text>
-    <text x="625" y="80" fill="#8b949e" font-size="11" text-anchor="middle">PK companyId / SK rowId</text>
-    <text x="625" y="96" fill="#8b949e" font-size="11" text-anchor="middle">Raw unprocessed rows</text>
+      <!-- BOX D: Projection Engine -->
+      <rect x="12" y="368" width="334" height="140" rx="9"
+            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
+      <rect x="12" y="368" width="334" height="30" rx="9" fill="#cffafe"/>
+      <rect x="12" y="386" width="334" height="12" fill="#cffafe"/>
+      <text x="24" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">Projection Engine</text>
+      <text x="24" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">lib/projection.ts</text>
+      <text x="24" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Deterministic cash curve (no LLM)</text>
+      <text x="24" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Real payables replace demo events</text>
+      <text x="24" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">WIP-inclusive days-of-supply</text>
 
-    <!-- normalize -->
-    <rect x="780" y="20" width="190" height="90" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
-    <text x="875" y="44" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">/api/normalize</text>
-    <text x="875" y="64" fill="#8b949e" font-size="11" text-anchor="middle">lib/etl.ts</text>
-    <text x="875" y="80" fill="#8b949e" font-size="11" text-anchor="middle">Clear old data → Re-insert</text>
-    <text x="875" y="96" fill="#8b949e" font-size="11" text-anchor="middle">Derive customers table</text>
+      <!-- BOX E: Claude API -->
+      <rect x="384" y="368" width="332" height="140" rx="9"
+            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
+      <rect x="384" y="368" width="332" height="30" rx="9" fill="#cffafe"/>
+      <rect x="384" y="386" width="332" height="12" fill="#cffafe"/>
+      <text x="396" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">Anthropic Claude API</text>
+      <text x="396" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">claude-sonnet-4-6</text>
+      <text x="396" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">tool_choice → forced structured JSON</text>
+      <text x="396" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">cashflow · inventory · receivables</text>
+      <text x="396" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">payables · purchasing · financing</text>
 
-    <!-- Aurora -->
-    <rect x="780" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#d97706" stroke-width="1.5"/>
-    <text x="875" y="174" fill="#e3b341" font-size="13" font-weight="700" text-anchor="middle">Aurora PostgreSQL</text>
-    <text x="875" y="194" fill="#8b949e" font-size="11" text-anchor="middle">Serverless v2 · Data API</text>
-    <text x="875" y="210" fill="#8b949e" font-size="11" text-anchor="middle">7 tables · Drizzle ORM</text>
-    <text x="875" y="226" fill="#8b949e" font-size="11" text-anchor="middle">sales / inventory / invoices</text>
-    <text x="875" y="242" fill="#8b949e" font-size="11" text-anchor="middle">customers / payables / forecast</text>
+      <!-- BOX F: ETL -->
+      <rect x="754" y="368" width="334" height="140" rx="9"
+            fill="#fff" stroke="#67e8f9" stroke-width="1.5"/>
+      <rect x="754" y="368" width="334" height="30" rx="9" fill="#cffafe"/>
+      <rect x="754" y="386" width="334" height="12" fill="#cffafe"/>
+      <text x="766" y="390" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#0e7490">ETL / Normalization</text>
+      <text x="766" y="416" font-family="'SF Mono',Consolas,monospace" font-size="13" fill="#374151">lib/etl.ts · PapaParse</text>
+      <text x="766" y="437" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Derives customers from invoices</text>
+      <text x="766" y="458" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Idempotent: delete-then-insert</text>
+      <text x="766" y="479" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">ensureFlexibleColumns migration</text>
 
-    <!-- Agents -->
-    <rect x="530" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#0891b2" stroke-width="1.5"/>
-    <text x="625" y="174" fill="#76e4f7" font-size="13" font-weight="700" text-anchor="middle">6 Claude Agents</text>
-    <text x="625" y="194" fill="#8b949e" font-size="11" text-anchor="middle">cashflow / inventory</text>
-    <text x="625" y="210" fill="#8b949e" font-size="11" text-anchor="middle">receivables / payables</text>
-    <text x="625" y="228" fill="#8b949e" font-size="11" text-anchor="middle">purchasing / financing</text>
-    <text x="625" y="244" fill="#8b949e" font-size="11" text-anchor="middle">tool_choice forces structured output</text>
+      <!-- ─────────────────────────────────────────────────
+           DATA BOXES  (y=562, h=162)
+      ───────────────────────────────────────────────────── -->
 
-    <!-- API result routes -->
-    <rect x="280" y="150" width="190" height="110" rx="10" fill="#161b22" stroke="#7c3aed" stroke-width="1.5"/>
-    <text x="375" y="174" fill="#d2a8ff" font-size="13" font-weight="700" text-anchor="middle">Result APIs</text>
-    <text x="375" y="194" fill="#8b949e" font-size="11" text-anchor="middle">/projection /forecast</text>
-    <text x="375" y="210" fill="#8b949e" font-size="11" text-anchor="middle">/inventory /receivables</text>
-    <text x="375" y="228" fill="#8b949e" font-size="11" text-anchor="middle">/payables /purchasing</text>
-    <text x="375" y="244" fill="#8b949e" font-size="11" text-anchor="middle">/financing</text>
+      <!-- BOX G: Aurora PostgreSQL -->
+      <rect x="12" y="562" width="682" height="162" rx="9"
+            fill="#fff" stroke="#fcd34d" stroke-width="1.5"/>
+      <rect x="12" y="562" width="682" height="30" rx="9" fill="#fef3c7"/>
+      <rect x="12" y="580" width="682" height="12" fill="#fef3c7"/>
+      <text x="24" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#92400e">Aurora PostgreSQL Serverless v2</text>
+      <text x="24" y="609" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">RDS Data API  ·  Drizzle ORM (aws-data-api/pg)  ·  7 tables</text>
+      <line x1="24" y1="620" x2="680" y2="620" stroke="#fde68a" stroke-width="1.2"/>
+      <text x="24" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">sku_sales_history</text>
+      <text x="150" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="163" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">inventory</text>
+      <text x="225" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="238" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">invoices</text>
+      <text x="299" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="312" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">customers</text>
+      <text x="389" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="402" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">payables</text>
+      <text x="460" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="473" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">vendors</text>
+      <text x="527" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" fill="#a8a29e"> · </text>
+      <text x="540" y="639" font-family="'SF Mono',Consolas,monospace" font-size="12.5" font-weight="600" fill="#d97706">cash_flow_forecast</text>
+      <text x="24" y="661" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">customers derived from invoices · payables drive outflows when loaded</text>
+      <text x="24" y="680" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">falls back to scheduled demo events if payables empty · forecast overwritten daily by cron</text>
+      <text x="24" y="699" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">HTTP-based RDS Data API — no connection pool exhaustion in serverless environments</text>
+      <text x="24" y="717" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">APP_AWS_ACCESS_KEY_ID prefix avoids Vercel runtime conflict with standard AWS_ vars</text>
 
-    <!-- Cron -->
-    <rect x="280" y="300" width="440" height="70" rx="10" fill="#161b22" stroke="#dc2626" stroke-width="1.5"/>
-    <text x="500" y="324" fill="#ff7b72" font-size="13" font-weight="700" text-anchor="middle">/api/cron · Vercel Cron daily at 06:00 UTC</text>
-    <text x="500" y="344" fill="#8b949e" font-size="11" text-anchor="middle">Iterate all companyIds → Re-run cashflow agent → Overwrite Aurora</text>
-    <text x="500" y="358" fill="#8b949e" font-size="11" text-anchor="middle">Requires Bearer CRON_SECRET; per-company failure logged as -1, no retry or alert</text>
+      <!-- BOX H: DynamoDB -->
+      <rect x="712" y="562" width="376" height="162" rx="9"
+            fill="#fff" stroke="#fcd34d" stroke-width="1.5"/>
+      <rect x="712" y="562" width="376" height="30" rx="9" fill="#fef3c7"/>
+      <rect x="712" y="580" width="376" height="12" fill="#fef3c7"/>
+      <text x="724" y="584" font-family="-apple-system,sans-serif" font-size="14" font-weight="700" fill="#92400e">Amazon DynamoDB (on-demand)</text>
+      <text x="724" y="611" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Table: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706" font-weight="600">cashflow-raw</tspan></text>
+      <text x="724" y="633" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">PK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706">companyId</tspan></text>
+      <text x="724" y="655" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">SK: <tspan font-family="'SF Mono',Consolas,monospace" fill="#d97706">rowId</tspan>  (uploadId # rowIndex)</text>
+      <text x="724" y="677" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">type: sales / inventory / invoice / payable</text>
+      <text x="724" y="699" font-family="-apple-system,sans-serif" font-size="13.5" fill="#374151">Raw uploaded CSV rows — unprocessed</text>
+      <text x="724" y="718" font-family="-apple-system,sans-serif" font-size="12.5" fill="#78716c">Cleared and re-written on each normalize run</text>
 
-    <!-- Bedrock unused -->
-    <rect x="780" y="300" width="190" height="70" rx="10" fill="#161b22" stroke="#484f58" stroke-width="1.5" stroke-dasharray="4 3"/>
-    <text x="875" y="324" fill="#8b949e" font-size="13" font-weight="700" text-anchor="middle">Bedrock Titan Embed</text>
-    <text x="875" y="344" fill="#8b949e" font-size="11" text-anchor="middle">lib/bedrock.ts implemented</text>
-    <text x="875" y="358" fill="#ff7b72" font-size="11" text-anchor="middle">⚠ Zero calls, not wired into any flow</text>
+      <!-- ─────────────────────────────────────────────────
+           ARROWS
+      ───────────────────────────────────────────────────── -->
 
-    <!-- arrows -->
-    <line x1="220" y1="65" x2="278" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <line x1="470" y1="65" x2="528" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <line x1="625" y1="110" x2="625" y2="148" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="3 3"/>
-    <text x="640" y="132" fill="#8b949e" font-size="10">triggered by companyId</text>
-    <line x1="780" y1="65" x2="722" y2="65" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="745" y="56" fill="#8b949e" font-size="10">Read raw rows</text>
-    <line x1="875" y1="110" x2="875" y2="148" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="890" y="132" fill="#8b949e" font-size="10">Clean &amp; write</text>
-    <line x1="780" y1="205" x2="722" y2="205" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="745" y="196" fill="#8b949e" font-size="10">Query real data</text>
-    <line x1="530" y1="205" x2="472" y2="205" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="490" y="196" fill="#8b949e" font-size="10">Structured result</text>
-    <line x1="375" y1="150" x2="200" y2="112" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-    <text x="260" y="125" fill="#8b949e" font-size="10">JSON response</text>
-    <line x1="500" y1="298" x2="500" y2="262" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow)"/>
-  </svg>
-</section>
+      <!-- 1. Client → API  (blue, HTTPS) -->
+      <line x1="179" y1="86" x2="179" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
+      <line x1="550" y1="86" x2="550" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
+      <line x1="921" y1="86" x2="921" y2="138" stroke="#2563eb" stroke-width="2" marker-end="url(#a-blue)"/>
+      <text x="188" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
+      <text x="559" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
+      <text x="930" y="116" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#2563eb">HTTPS</text>
 
-<!-- 5. DATA MODEL -->
-<section id="datamodel">
-  <h2><span class="num">5</span>Data Model</h2>
-  <p class="section-desc">One DynamoDB raw table + seven Aurora PostgreSQL structured tables (<code class="mono">db/schema.ts</code>, defined with Drizzle).</p>
+      <!-- 2. API → Service  (purple) -->
+      <line x1="179" y1="314" x2="179" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
+      <line x1="550" y1="314" x2="550" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
+      <line x1="921" y1="314" x2="921" y2="368" stroke="#7c3aed" stroke-width="2" marker-end="url(#a-purple)"/>
 
-  <h3 style="font-size:14px; color:var(--orange); margin:0 0 10px;">DynamoDB — cashflow-raw</h3>
-  <table style="margin-bottom:24px;">
-    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
-    <tbody>
-      <tr><td class="mono-cell">companyId</td><td class="mono">string (PK)</td><td>Tenant isolation key</td></tr>
-      <tr><td class="mono-cell">rowId</td><td class="mono">string (SK)</td><td><code class="mono">uploadId#rowIndex</code></td></tr>
-      <tr><td class="mono-cell">type</td><td class="mono">"sales"|"inventory"|"invoice"|"payable"</td><td>Category of raw data</td></tr>
-      <tr><td class="mono-cell">data</td><td class="mono">Record&lt;string,string&gt;</td><td>Raw CSV row fields — no type coercion applied</td></tr>
-      <tr><td class="mono-cell">uploadedAt</td><td class="mono">ISO string</td><td>Upload timestamp</td></tr>
-    </tbody>
-  </table>
+      <!-- 3. Projection Engine → Aurora  (straight down) -->
+      <line x1="179" y1="508" x2="179" y2="562" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
+      <text x="188" y="538" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">reads</text>
 
-  <h3 style="font-size:14px; color:var(--blue); margin:0 0 10px;">Aurora PostgreSQL (7 tables)</h3>
-  <table>
-    <thead><tr><th>Table</th><th>Key Fields</th><th>Purpose</th></tr></thead>
-    <tbody>
-      <tr><td class="mono-cell">sku_sales_history</td><td class="mono">sku, sold_qty, revenue, sold_at</td><td>Sales velocity baseline; fed to cashflow / inventory agents</td></tr>
-      <tr><td class="mono-cell">inventory</td><td class="mono">sku, qty_on_hand, qty_wip, unit_cost, vendor_*</td><td>Current inventory value + dead stock inputs; WIP included in days-of-supply</td></tr>
-      <tr><td class="mono-cell">invoices</td><td class="mono">customer_id, amount, issued_at, due_at, paid_at, status</td><td>AR detail; shared by cashflow / projection / receivables / financing</td></tr>
-      <tr><td class="mono-cell">customers</td><td class="mono">avg_days_late, payment_score (1–10)</td><td><b>Derived from invoices</b> by lib/etl.ts — not directly uploaded by users</td></tr>
-      <tr><td class="mono-cell">payables</td><td class="mono">vendor_id, amount, issued_at, due_at, paid_at, status</td><td>AP detail; drives projection outflows when real data is available</td></tr>
-      <tr><td class="mono-cell">vendors</td><td class="mono">id, name</td><td>Derived from payables during normalize</td></tr>
-      <tr><td class="mono-cell">cash_flow_forecast</td><td class="mono">forecast_dt, cash_in, cash_out, balance, gap</td><td>Cashflow agent output persisted to Aurora; overwritten daily by cron</td></tr>
-    </tbody>
-  </table>
+      <!-- 4a. Claude → Aurora  (L-shape, solid) -->
+      <path d="M 544,508 L 544,534 L 352,534 L 352,562"
+            fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
 
-  <div class="quote">customers.payment_score formula (lib/etl.ts): <code class="mono">score = clamp(10 − avgDaysLate/5, 1, 10)</code> — 0 days late = score 10; ~45 days late = score 1.</div>
-</section>
+      <!-- 4b. Aurora → Claude  (L-shape, dashed, reads) -->
+      <path d="M 364,562 L 364,534 L 556,534 L 556,508"
+            fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#a-orange)"/>
 
-<!-- 6. FUNCTION LIST -->
-<section id="functions">
-  <h2><span class="num">6</span>Feature Inventory (Page / API / Agent cross-reference)</h2>
-  <table>
-    <thead><tr><th>Feature</th><th>Frontend</th><th>API</th><th>Agent / Logic</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>Data Upload</td><td class="mono">/upload</td><td class="mono">POST /api/upload</td><td>PapaParse → DynamoDB</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Normalize / ETL</td><td>Seed button on upload page</td><td class="mono">POST /api/normalize</td><td>lib/etl.ts: DynamoDB → Aurora, idempotent (delete-then-insert)</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Deterministic Projection</td><td>Cash Flow section (Projection tab)</td><td class="mono">GET /api/projection</td><td>lib/projection.ts: real AR/AP → daily cash curve; no LLM call</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>90-day AI Forecast</td><td>Cash Flow section (Forecast tab)</td><td class="mono">POST/GET /api/forecast</td><td>cashflow-agent: tool-forced output of 90 daily cashIn/cashOut/balance/gap rows</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Dead Stock List</td><td>Dead Stock section</td><td class="mono">GET /api/inventory</td><td>inventory-agent: days-of-supply (on-hand + WIP) + discount + vendor tips</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Purchasing Recommendations</td><td>Purchasing section</td><td class="mono">GET /api/purchasing</td><td>purchasing-agent: reorder queue ranked by urgency</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Collections Priority</td><td>Collections section</td><td class="mono">GET /api/receivables</td><td>receivables-agent: aging × amount × customer payment score</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Upcoming Bills</td><td>Payables section</td><td class="mono">GET /api/payables</td><td>payables-agent: vendor bills ranked by due-date urgency</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Financing Comparison</td><td>Financing section</td><td class="mono">POST /api/financing</td><td>financing-agent: bank_loan / liquidate / ar_finance with true APR normalization; gap auto-filled from projection</td><td class="status-done">✅ Complete</td></tr>
-      <tr><td>Daily Auto-Refresh</td><td>—</td><td class="mono">GET /api/cron</td><td>Iterates all companyIds, re-runs cashflow-agent</td><td class="status-partial">⚠ Only refreshes cashflow forecast; other agents not refreshed; failures produce no alert</td></tr>
-      <tr><td>Audit Compliance Alert<br><span class="comment" style="font-size:11px;">(listed in README)</span></td><td>—</td><td>—</td><td>—</td><td class="status-missing">❌ No corresponding code anywhere in the codebase</td></tr>
-      <tr><td>Semantic Dedup / Embeddings</td><td>—</td><td>—</td><td>lib/bedrock.ts::embedText()</td><td class="status-missing">❌ Function implemented, zero calls</td></tr>
-    </tbody>
-  </table>
-</section>
+      <text x="450" y="528" text-anchor="middle"
+            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">reads data · writes forecast</text>
 
-<!-- 7. KEY DECISIONS -->
-<section id="decisions">
-  <h2><span class="num">7</span>Key Architectural Decisions & Rationale</h2>
-  <div class="cards">
-    <div class="card">
-      <h3>Why DynamoDB + Aurora dual-database instead of just one</h3>
-      <p>DynamoDB absorbs high-frequency, unstructured raw uploads (CSV rows land directly as <code class="mono">Record&lt;string,string&gt;</code>, no type enforcement). Aurora holds strongly-typed cleaned tables that agents and the frontend query with structured SQL. This maps cleanly to the hackathon's "database: pick one or combine" bonus — a single database would work, but the dual-database story better fits the technical requirements.</p>
-    </div>
-    <div class="card">
-      <h3>Why RDS Data API instead of direct Postgres connection</h3>
-      <p><code class="mono">lib/aurora.ts</code> uses <code class="mono">RDSDataClient</code> + <code class="mono">drizzle-orm/aws-data-api/pg</code>; SETUP.md explicitly notes "avoids exhausting the connection pool in serverless." Each Vercel request spins up a fresh serverless function instance; direct Postgres would drain the connection limit quickly. The Data API communicates over HTTP with no connection pool overhead.</p>
-    </div>
-    <div class="card">
-      <h3>Why all agents use tool_choice to force structured output</h3>
-      <p><code class="mono">tools.ts</code> defines tool schemas for each agent; every call passes <code class="mono">tool_choice:{type:"tool", name:...}</code> so Claude must respond via the tool, never as free text. This guarantees the return value is always parseable JSON — no defensive parsing needed in the API layer or database write path.</p>
-    </div>
-    <div class="card">
-      <h3>Core bug fixed: agents used to "make up numbers"</h3>
-      <p><code class="mono">lib/queries.ts</code> comment reads verbatim: "This is the fix for the core bug: agents used to prompt Claude with no data, so it invented numbers." All 6 agents now call <code class="mono">getCompanyData()</code> before the Claude call and JSON.stringify the real Aurora rows into the prompt — eliminating hallucinated outputs entirely.</p>
-    </div>
-    <div class="card">
-      <h3>Why normalize is "delete all, then re-insert"</h3>
-      <p><code class="mono">lib/etl.ts</code> comment: "Idempotent: wipes the company's existing rows first so re-running an upload doesn't duplicate." Blunt but prevents duplicated sales/inventory figures from re-uploads — a more dangerous failure mode than the latency cost of a full re-insert. A reasonable trade-off within an 11-day sprint.</p>
-    </div>
-    <div class="card">
-      <h3>customers table is derived, not uploaded</h3>
-      <p>Users upload only sales / inventory / invoices / payables CSVs. The <code class="mono">customers</code> table — including <code class="mono">avg_days_late</code> and <code class="mono">payment_score</code> — is computed entirely by <code class="mono">lib/etl.ts</code> during normalize from <code class="mono">paid_at</code> vs <code class="mono">due_at</code> in invoices. This reduces user data-entry burden and keeps the derivation auditable.</p>
-    </div>
-    <div class="card">
-      <h3>Deterministic projection runs without LLM</h3>
-      <p><code class="mono">lib/projection.ts</code> computes the daily cash curve entirely from Aurora data on every page load — no Claude call, no cost, instant response. Real AP due dates from the <code class="mono">payables</code> table replace hardcoded demo events when available. The AI forecast is a separate saved run the user triggers manually (or via cron), keeping the always-on timeline free and responsive.</p>
-    </div>
-    <div class="card">
-      <h3>APR normalization for financing options</h3>
-      <p>Liquidating inventory at a 33% haircut is not comparable to a 10% annual loan. The financing agent computes true APR = (cost ÷ raised) × (365 ÷ days) only for time-priced instruments (bank loan, AR finance). Liquidation shows "one-time haircut, not annualized" to avoid the misleading 33% → ~240% APR figure that would make liquidation look far more expensive than it is.</p>
+      <!-- 5. ETL → DynamoDB -->
+      <path d="M 921,508 L 921,534 L 900,534 L 900,562"
+            fill="none" stroke="#d97706" stroke-width="2" marker-end="url(#a-orange)"/>
+      <text x="932" y="530" font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">upload</text>
+
+      <!-- 6. DynamoDB → Aurora  (normalize, dashed horizontal) -->
+      <path d="M 712,643 L 694,643"
+            fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#a-orange)"/>
+      <text x="752" y="632" text-anchor="middle"
+            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">normalize</text>
+      <text x="752" y="647" text-anchor="middle"
+            font-family="'SF Mono',Consolas,monospace" font-size="11" fill="#d97706">(ETL)</text>
+
+    </svg>
+
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#2563eb;"></div>HTTPS request (client → server)</div>
+      <div class="li"><div class="ld" style="background:#7c3aed;"></div>Internal function call (API → service)</div>
+      <div class="li"><div class="ld" style="background:#d97706;"></div>Database write (service → data)</div>
+      <div class="li"><div class="ld-dash"></div>Database read / normalize pass</div>
+      <div class="ts">Commit 6d8741c · 2026-06-28</div>
     </div>
   </div>
-</section>
-
-<!-- 8. GAPS -->
-<section id="gaps">
-  <h2><span class="num">8</span>Known Gaps & Risks (ordered by impact)</h2>
-  <table>
-    <thead><tr><th>Gap</th><th>Impact</th><th>Evidence</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><b>Bedrock embedding is dead code</b></td>
-        <td class="status-partial">Low (but high explanation cost) — SETUP.md lists Bedrock as an "on-brand" bonus, but the actual product logic has no use for semantic vectors (this is leftover from a rejected direction). If a judge asks about it during the demo, there is no good answer.</td>
-        <td>Global search for <code class="mono">embedText</code> finds exactly one occurrence: the definition itself</td>
-      </tr>
-      <tr>
-        <td>"Audit Compliance Alert" feature does not exist</td>
-        <td class="status-partial">Low — The README judging criteria table lists this as a differentiator; the codebase has no implementation.</td>
-        <td>Global search for audit / compliance / write-off matches only the README itself</td>
-      </tr>
-      <tr>
-        <td>Cron failures are silent</td>
-        <td class="status-partial">Medium — A per-company forecast refresh failure is logged only as <code class="mono">-1</code> in the result object; no retry, no alert, no notification. The next day's dashboard may silently show stale data.</td>
-        <td><code class="mono">app/api/cron/route.ts</code> catch block: <code class="mono">results[companyId] = -1</code></td>
-      </tr>
-      <tr>
-        <td>No multi-tenant access control</td>
-        <td class="status-partial">Medium — <code class="mono">companyId</code> is an arbitrary string; anyone who knows another company's ID can read their data and financial recommendations. A minimal auth layer (session cookie, token, or fixed demo ID) is needed before a public demo.</td>
-        <td>All API routes accept <code class="mono">companyId</code> with no session or auth check</td>
-      </tr>
-      <tr>
-        <td>No input validation</td>
-        <td class="status-partial">Low — Zod is installed but unused. A malformed CSV (e.g. non-numeric amount) silently coerces to 0 via <code class="mono">Number(d.sold_qty ?? 0)</code> rather than returning an error.</td>
-        <td><code class="mono">lib/etl.ts</code> uses silent numeric coercion throughout</td>
-      </tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- 9. CHECKLIST -->
-<section id="checklist">
-  <h2><span class="num">9</span>Submission Checklist</h2>
-  <table>
-    <thead><tr><th>Requirement</th><th>Current Status</th></tr></thead>
-    <tbody>
-      <tr><td>Written description (which AWS database was used)</td><td class="status-done">✅ README + SETUP.md clearly describe Aurora + DynamoDB roles and rationale</td></tr>
-      <tr><td>3-minute demo video</td><td class="status-missing">❌ Not yet recorded</td></tr>
-      <tr><td>Vercel project URL + Team ID</td><td class="status-partial">⚠ vercel.json is configured with cron; confirm actual Vercel deployment exists and obtain the live URL</td></tr>
-      <tr><td>Architecture diagram</td><td class="status-done">✅ §4 of this document is ready to use, or can be exported as a standalone image</td></tr>
-      <tr><td>AWS database usage screenshot</td><td class="status-missing">❌ Not captured (requires AWS Console login to screenshot DynamoDB + Aurora)</td></tr>
-      <tr><td>Blog post / video with #H0Hackathon (optional bonus)</td><td class="status-missing">— Not started (optional)</td></tr>
-    </tbody>
-  </table>
-</section>
-
-<!-- 10. NEXT STEPS -->
-<section id="next">
-  <h2><span class="num">10</span>Recommended Next Steps</h2>
-  <ul class="clean">
-    <li><b>Priority 1 — Confirm Vercel deployment</b>: Get a live URL so the remote <code class="mono">seed.sh</code> mode can be tested end-to-end, and to satisfy the hard "Vercel project link" submission requirement.</li>
-    <li><b>Priority 2 — Decide what to do with Bedrock</b>: Either remove <code class="mono">lib/bedrock.ts</code> to avoid judge questions, or invest a small amount of effort wiring it to a real use case (e.g. semantic clustering of dead-stock product descriptions) to reclaim the "used Bedrock" bonus.</li>
-    <li><b>Priority 3 — Add minimal access control</b>: At minimum, hardcode the demo company ID or add a simple URL token so the demo cannot be trivially used to read another company's data.</li>
-    <li><b>Priority 4 — Run the full seed.sh pipeline end-to-end before recording</b>: Confirm that normalize → projection → forecast → all agent endpoints work in sequence on the deployed instance before recording the demo video.</li>
-    <li><b>Priority 5 — Take AWS Console screenshots</b>: Log into the AWS Console and capture DynamoDB table + Aurora cluster screenshots while there — required for the submission checklist and quick to do alongside deployment verification.</li>
-  </ul>
-</section>
 
 </div>
-
-<footer>Generated from repository state (latest commit <code class="mono">6d8741c</code>) · Updated 2026-06-28</footer>
-
 </body>
 </html>
