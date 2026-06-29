@@ -1137,6 +1137,20 @@ function FinancingSection({ defaultGap }: { defaultGap: number }) {
         >
           {loading ? "Comparing…" : "Compare"}
         </button>
+        {(gapInput || recommendation || error || aiNotice) && (
+          <button
+            type="button"
+            onClick={() => {
+              setGapInput("");
+              setRecommendation(null);
+              setError(null);
+              setAiNotice(null);
+            }}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            Clear All
+          </button>
+        )}
       </form>
 
       {error && (

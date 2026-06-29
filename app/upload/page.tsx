@@ -1,7 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+
+type CsvType = "sales" | "inventory" | "invoice" | "payable";
+
+const CSV_TYPE_LABEL: Record<CsvType, string> = {
+  sales: "Sales",
+  inventory: "Inventory",
+  invoice: "Invoices",
+  payable: "Payables",
+};
+
+// Best-effort filename guess so a multi-file drop can be auto-sorted into the
+// right slot. Deliberately conservative — ambiguous or unmatched filenames
+// fall through to manual assignment rather than risk silently mis-filing data.
+function guessCsvType(filename: string): CsvType | null {
+  const name = filename.toLowerCase();
+  if (/sale/.test(name)) return "sales";
+  if (/inventory|stock|\bsku/.test(name)) return "inventory";
+  if (/invoice|receivable/.test(name)) return "invoice";
+  if (/payable|vendor|\bbill/.test(name)) return "payable";
+  return null;
+}
 
 export default function UploadPage() {
   const [status, setStatus] = useState<{ text: string; tone: "success" | "error" } | null>(null);
@@ -11,6 +32,62 @@ export default function UploadPage() {
   const [seeded, setSeeded] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [normalized, setNormalized] = useState(false);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [unassigned, setUnassigned] = useState<File[]>([]);
+  const salesInputRef = useRef<HTMLInputElement>(null);
+  const inventoryInputRef = useRef<HTMLInputElement>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
+  const payableInputRef = useRef<HTMLInputElement>(null);
+  const multiInputRef = useRef<HTMLInputElement>(null);
+
+  function slotInputRef(type: CsvType) {
+    switch (type) {
+      case "sales":
+        return salesInputRef;
+      case "inventory":
+        return inventoryInputRef;
+      case "invoice":
+        return invoiceInputRef;
+      case "payable":
+        return payableInputRef;
+    }
+  }
+
+  // Assigns a File into a native <input type="file"> via DataTransfer so the
+  // browser's own "filename chosen" UI stays in sync, and handleSubmit's
+  // existing form.elements read-out keeps working unchanged.
+  function assignFileToSlot(type: CsvType, file: File) {
+    const input = slotInputRef(type).current;
+    if (!input) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+  }
+
+  function handleDroppedFiles(incoming: File[]) {
+    const csvFiles = incoming.filter((f) => f.name.toLowerCase().endsWith(".csv"));
+    const assigned: string[] = [];
+    const stillUnassigned: File[] = [];
+
+    for (const file of csvFiles) {
+      const type = guessCsvType(file.name);
+      if (type) {
+        assignFileToSlot(type, file);
+        assigned.push(`${file.name} → ${CSV_TYPE_LABEL[type]}`);
+      } else {
+        stillUnassigned.push(file);
+      }
+    }
+
+    if (assigned.length) {
+      setStatus({
+        text: `Auto-detected ${assigned.join(", ")}. Review the fields below, then click Upload.`,
+        tone: "success",
+      });
+    }
+    if (stillUnassigned.length) setUnassigned((prev) => [...prev, ...stillUnassigned]);
+  }
 
   async function parseResponse(response: Response) {
     const text = await response.text();
@@ -53,7 +130,13 @@ export default function UploadPage() {
         .filter((entry) => entry.file);
 
       if (pending.length === 0) {
-        setStatus({ text: "Choose at least one CSV file", tone: "error" });
+        setStatus({
+          text:
+            unassigned.length > 0
+              ? "Choose at least one CSV file — the dropped files above still need a type assigned."
+              : "Choose at least one CSV file",
+          tone: "error",
+        });
         return;
       }
 
@@ -77,6 +160,7 @@ export default function UploadPage() {
         tone: "success",
       });
       form.reset();
+      setUnassigned([]);
     } catch (err) {
       setStatus({ text: err instanceof Error ? err.message : "Upload failed", tone: "error" });
     } finally {
@@ -155,9 +239,74 @@ export default function UploadPage() {
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-1 text-sm font-semibold text-slate-900">1. Upload CSVs</h2>
         <p className="mb-4 text-sm text-slate-500">Pick any combination — sales, inventory, invoices, or all three.</p>
+
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            handleDroppedFiles(Array.from(e.dataTransfer.files));
+          }}
+          onClick={() => multiInputRef.current?.click()}
+          className={`mb-4 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
+            isDragging ? "border-slate-900 bg-slate-50" : "border-slate-300 hover:border-slate-400"
+          }`}
+        >
+          <p className="text-sm font-medium text-slate-700">Drag & drop CSVs here, or click to browse</p>
+          <p className="text-xs text-slate-400">Drop multiple files at once — we&apos;ll guess sales / inventory / invoices / payables from the filename.</p>
+          <input
+            ref={multiInputRef}
+            type="file"
+            accept=".csv"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              handleDroppedFiles(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        {unassigned.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="mb-2 text-xs font-medium text-amber-800">
+              Couldn&apos;t guess these from the filename — assign manually:
+            </p>
+            <div className="flex flex-col gap-2">
+              {unassigned.map((file, idx) => (
+                <div key={`${file.name}-${idx}`} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate text-slate-700">{file.name}</span>
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const type = e.target.value as CsvType | "";
+                      if (!type) return;
+                      assignFileToSlot(type, file);
+                      setUnassigned((prev) => prev.filter((_, i) => i !== idx));
+                    }}
+                    className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    <option value="">Assign to…</option>
+                    {(Object.keys(CSV_TYPE_LABEL) as CsvType[]).map((type) => (
+                      <option key={type} value={type}>
+                        {CSV_TYPE_LABEL[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field label="Sales CSV">
             <input
+              ref={salesInputRef}
               type="file"
               name="sales"
               accept=".csv"
@@ -166,6 +315,7 @@ export default function UploadPage() {
           </Field>
           <Field label="Inventory CSV">
             <input
+              ref={inventoryInputRef}
               type="file"
               name="inventory"
               accept=".csv"
@@ -174,6 +324,7 @@ export default function UploadPage() {
           </Field>
           <Field label="Invoices CSV">
             <input
+              ref={invoiceInputRef}
               type="file"
               name="invoice"
               accept=".csv"
@@ -182,6 +333,7 @@ export default function UploadPage() {
           </Field>
           <Field label="Payables CSV">
             <input
+              ref={payableInputRef}
               type="file"
               name="payable"
               accept=".csv"
